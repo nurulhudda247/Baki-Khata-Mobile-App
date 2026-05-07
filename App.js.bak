@@ -1,0 +1,32 @@
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { registerRootComponent } from 'expo';
+
+function App() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.text}>App.js is working!</Text>
+      <Text style={styles.subtext}>Bypassing Expo Router for testing.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  text: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  subtext: {
+    color: '#888',
+    marginTop: 10,
+  },
+});
+
+registerRootComponent(App);
