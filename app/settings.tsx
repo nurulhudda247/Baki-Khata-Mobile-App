@@ -240,6 +240,12 @@ export default function Settings() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('settings.developerCredits')}</Text>
           <SettingItem 
+            icon="school-outline" 
+            label={t('settings.startTutorial')} 
+            value={t('settings.restartTutorialDesc')} 
+            onPress={() => router.push('/tutorial')} 
+          />
+          <SettingItem 
             icon="rocket-outline" 
             label={t('settings.upcomingUpdates')} 
             value={t('settings.viewRoadmap')} 

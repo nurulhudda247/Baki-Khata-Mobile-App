@@ -32,7 +32,7 @@ export const initDb = async () => {
   const database = await getDb();
   if (database) {
     await database.execAsync(SCHEMA);
-    
+
     // Migration: Add category to products if it doesn't exist
     try {
       await database.execAsync('ALTER TABLE products ADD COLUMN category TEXT DEFAULT "Other"');
@@ -48,13 +48,13 @@ export const initDb = async () => {
 const WEB_STORAGE_KEY = 'bakikhata_web_db_v2';
 const getWebData = async () => {
   const data = await AsyncStorage.getItem(WEB_STORAGE_KEY);
-  return data ? JSON.parse(data) : { 
-    user_profile: [], 
-    shops: [], 
-    customers: [], 
-    products: [], 
-    transactions: [], 
-    payments: [] 
+  return data ? JSON.parse(data) : {
+    user_profile: [],
+    shops: [],
+    customers: [],
+    products: [],
+    transactions: [],
+    payments: []
   };
 };
 
@@ -66,7 +66,7 @@ export const queryAll = async <T>(sql: string, params: any[] = []): Promise<T[]>
   if (Platform.OS === 'web') {
     const data = await getWebData();
     const s = sql.toLowerCase();
-    
+
     if (s.includes('from shops')) {
       const shops = data.shops.map((shop: any) => {
         const shopCustomers = data.customers.filter((c: any) => String(c.shop_id) === String(shop.id));

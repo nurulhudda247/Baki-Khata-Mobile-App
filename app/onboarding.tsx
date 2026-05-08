@@ -98,7 +98,7 @@ export default function Onboarding() {
         [name.trim(), language, mode]
       );
       await refreshUserProfile();
-      router.replace('/');
+      router.replace('/tutorial');
     } catch (e) {
       console.error('Failed to save profile', e);
     }

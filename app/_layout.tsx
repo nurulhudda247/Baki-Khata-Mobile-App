@@ -74,6 +74,7 @@ const RootLayoutContent = () => {
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="tutorial" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ title: t('settings.title') }} />
         <Stack.Screen name="shop/[id]" options={{ title: t('shop.shopDetails') }} />
         <Stack.Screen name="shop/add" options={{ title: t('shop.addShop') }} />

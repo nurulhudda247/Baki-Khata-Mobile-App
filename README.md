@@ -1,6 +1,6 @@
 # Baki Khata - Digital Ledger & Credit Management
 
-Baki Khata is a professional, offline-first digital ledger application designed for small business owners and individuals to track credit (baki), payments, and customer relationships with ease. Built with a focus on simplicity, data privacy, and a premium user experience.
+Baki Khata is a professional, offline-first digital ledger application designed for individuals and small business owners to track credit (baki), payments, and financial records with ease. Built with a focus on simplicity, data privacy, and a premium user experience.
 
 ### Performance & Optimization
 - **SQLite WAL Mode**: Enabled Write-Ahead Logging (WAL) for faster database operations and better concurrency.
@@ -17,6 +17,7 @@ Baki Khata is a professional, offline-first digital ledger application designed 
 - **Custom Font Scaling**: Proprietary `sfs()` utility for consistent typography across different device screen densities.
 - **BST Enforcement**: Automated timezone handling ensuring all records strictly follow **Bangladesh Standard Time (UTC+6)**.
 - **Premium Modals**: Unified and beautifully designed confirmation and input modals for a high-end feel.
+- **Guided Tour**: Fully interactive tutorial system for onboarding and re-training users.
 - **Refined Search**: High-performance search functionality for products with category-based filtering.
 
 ## Key Features
@@ -36,6 +37,7 @@ Baki Khata is a professional, offline-first digital ledger application designed 
 ### Personalization & Accessibility
 - **Theme Support**: Full Dark and Light mode integration matching system preferences.
 - **Multi-Language**: Native support for **English** and **Bengali (বাংলা)**.
+- **Cache Management**: Built-in utility to clear temporary files and free up device storage.
 - **Offline First**: 100% functional without internet; all data resides securely on the device.
 
 ## Tech Stack

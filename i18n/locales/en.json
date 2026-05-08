@@ -112,7 +112,7 @@
     "addProducts": "Add Products",
     "totalAmount": "Total Amount",
     "saveTransaction": "Save Transaction",
-    "paymentReceived": "Payment Received",
+    "paymentReceived": "Payment Made",
     "cashPayment": "Cash payment"
   },
   "payment": {
@@ -141,8 +141,9 @@
     "bengali": "Bengali",
     "selectLanguage": "Select Language",
     "profileUpdated": "Profile updated successfully",
-    "dataManagement": "Data Management",
-    "developerCredits": "Developer & Credits",
+    "featureRequest": "Feature Request",
+    "sendMail": "Email Developer",
+    "developerCredits": "Developer & Support",
     "developedBy": "Developed By",
     "version": "Version",
     "privacyPolicy": "Privacy Policy",
@@ -154,7 +155,7 @@
     "viewRoadmap": "View roadmap",
     "removePhotoTitle": "Remove Photo",
     "removePhotoMsg": "Are you sure you want to remove your profile photo?",
-    "appFooter": "Baki Khata v1.0.0 • Personal Ledger",
+    "appFooter": "Baki Khata v1.1.0 • Personal Ledger",
     "fontSize": "Font Size",
     "fontSizeSmall": "Small",
     "fontSizeNormal": "Normal",
@@ -165,7 +166,9 @@
     "clearCacheMsg": "This will clear temporary files and image cache. Your ledger and profile data will be 100% safe.",
     "clearNow": "Clear Now",
     "cacheCleared": "Cache cleared successfully",
-    "cacheError": "Failed to clear cache"
+    "cacheError": "Failed to clear cache",
+    "startTutorial": "Start Tutorial",
+    "restartTutorialDesc": "Watch again"
   },
   "product": {
     "cannotDelete": "This product cannot be deleted because it has transaction history. Please delete the transactions first or just edit the product instead.",
@@ -205,6 +208,8 @@
   "upcoming": {
     "title": "Upcoming Updates",
     "subtitle": "What's Coming Next",
+    "downloadVersions": "Download Versions",
+    "downloadDesc": "Download latest and previous versions of Baki Khata from GitHub.",
     "requestTitle": "Request a Feature",
     "requestSubtitle": "Have an idea to make Baki Khata better? Let us know!",
     "submitRequest": "Submit a Request",
@@ -220,16 +225,62 @@
     "errorMail": "Email app is not available on this device. Please email us directly at {{email}}",
     "features": {
       "dashboard": {
-        "title": "Shopkeeper Dashboard",
-        "desc": "A powerful overview of your daily sales, total dues, and most valuable customers."
+        "title": "Personal Dashboard",
+        "desc": "A powerful overview of your daily spending, total dues, and the shops where you owe the most."
       },
       "sync": {
         "title": "Cloud Sync & Multi-Device",
         "desc": "Access your baki khata from any device with secure cloud backup."
       },
       "advanced": {
-        "title": "Advanced Customer Management",
-        "desc": "Manage multiple customers under a single shop with individual ledgers."
+        "title": "Advanced Profile Management",
+        "desc": "Manage multiple spending profiles or categories under a single ledger."
+      }
+    }
+  },
+  "tutorial": {
+    "welcome": "Guided Tour",
+    "skip": "Skip",
+    "next": "Next",
+    "finish": "Got it!",
+    "restart": "Restart Tutorial",
+    "getStarted": "Get Started",
+    "doneTitle": "You're all set!",
+    "doneDesc": "You now know the basics of Baki Khata. Ready to manage your ledger?",
+    "settingsNote": "Note: You can watch this tutorial again anytime from Settings.",
+    "tapToAdd": "Tap to add {{name}}",
+    "steps": {
+      "addShop": {
+        "title": "Add Your First Shop",
+        "desc": "Tap the '+' button to add a shop and start tracking your baki."
+      },
+      "shopDetails": {
+        "title": "Shop Overview",
+        "desc": "See your total due to this shop at a glance and track your history."
+      },
+      "quickEntry": {
+        "title": "Add Payment",
+        "desc": "Whenever you pay money back to the shop, tap 'Add Payment' to record it."
+      },
+      "manageProducts": {
+        "title": "Manage Products",
+        "desc": "Setup products you buy from this shop to record entries even faster."
+      },
+      "addProduct": {
+        "title": "Add New Product",
+        "desc": "Tap '+' to add a product with its name and default price."
+      },
+      "deleteProduct": {
+        "title": "Remove Product",
+        "desc": "Swipe left on any product to remove it from your list."
+      },
+      "recordPurchase": {
+        "title": "Record a Purchase",
+        "desc": "Simply tap on any product you bought to record a new baki entry."
+      },
+      "restartLocation": {
+        "title": "Tutorial Location",
+        "desc": "You can restart this tutorial anytime from the Settings menu here."
       }
     }
   }

@@ -143,6 +143,7 @@ export default function Home() {
   ), [searchQuery, theme.colors.surfaceElevated, theme.colors.textMuted, theme.colors.textPrimary, theme.colors.primary, sfs, t, router]);
 
   if (!isLoading && !userProfile) return <Redirect href="/onboarding" />;
+  if (userProfile && userProfile.has_seen_tutorial === 0) return <Redirect href="/tutorial" />;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -157,7 +158,7 @@ export default function Home() {
           accessibilityLabel={t('settings.title')}
           accessibilityRole="button"
         >
-          {userProfile?.image_uri ? <Image source={{ uri: userProfile.image_uri }} style={styles.profileImage} /> : <Ionicons name="person-outline" size={sfs(24)} color={theme.colors.textPrimary} />}
+          <Ionicons name="settings-outline" size={sfs(24)} color={theme.colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
