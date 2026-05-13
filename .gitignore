@@ -1,0 +1,104 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npm
+.eslintcache
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+.metro-health-check*
+
+# Android
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+android/GeneratedPluginRegistrant.java
+*.apk
+*.aab
+
+# iOS
+ios/build/
+ios/Pods/
+ios/.xccheckout
+ios/*.xcworkspace
+ios/*.xcuserdata
+ios/*.xcworkspace/xcuserdata
+ios/*.xcworkspace/xcshareddata
+ios/*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+ios/*.xcworkspace/xcuserdata/*.xcuserdatad
+ios/DerivedData/
+ios/IPHONEOS_DEPLOYMENT_TARGET
+ios/*.pbproj
+ios/*.pbxuser
+ios/*.mode1v3
+ios/*.mode2v3
+ios/*.perspectivev3
+ios/!default.pbxuser
+ios/!default.mode1v3
+ios/!default.mode2v3
+ios/!default.perspectivev3
+ios/xcuserdata/
+ios/project.xcworkspace/
+ios/xcshareddata/
+ios/Frameworks/
+ios/DerivedData/
+ios/*.swp
+ios/*.hmap
+ios/*.xccheckout
+ios/*.moved-aside
+ios/*.xcconfig
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Debugging
+logs
+*.log
+*.bak
+node
+node_bin
+
+# Databases (if any local files)
+*.sqlite
+*.sqlite-journal
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+
+# Local build artifacts
+android/app/google-services.json
+ios/GoogleService-Info.plist
