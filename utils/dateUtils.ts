@@ -90,6 +90,17 @@ export const formatTimeLabel = (timestamp: string): string => {
     hours = hours ? hours : 12; 
     const strMinutes = minutes < 10 ? '0' + minutes : minutes;
     
+    const isBn = i18n.language === 'bn';
+    const toBn = (num: string | number) => {
+      const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+      return num.toString().split('').map(c => bnDigits[parseInt(c)] || c).join('');
+    };
+
+    if (isBn) {
+      const bnAmpm = ampm === 'AM' ? 'পূর্বাহ্ণ' : 'অপরাহ্ণ';
+      return `${toBn(hours)}:${toBn(strMinutes)} ${bnAmpm}`;
+    }
+    
     return hours + ':' + strMinutes + ' ' + ampm;
   } catch (e) {
     return '';

@@ -22,9 +22,9 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
-const { height } = Dimensions.get('window');
+import { Theme } from '../../constants/darkTheme';
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme, sfs: (s: number) => number) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#FFF',
+    color: theme.colors.white,
     fontFamily: 'Inter_700Bold',
     letterSpacing: -0.5,
   },
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   buttonText: {
-    color: '#FFF',
+    color: theme.colors.white,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.5,
   },
@@ -89,6 +89,7 @@ const styles = StyleSheet.create({
 
 export default function ForgotPasswordScreen() {
   const { theme, sfs, mode } = useTheme();
+  const styles = getStyles(theme, sfs);
   const { t } = useTranslation();
   const { showToast } = useToast();
   const router = useRouter();
@@ -112,13 +113,13 @@ export default function ForgotPasswordScreen() {
   async function handleResetPassword() {
     if (!email) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast('Please enter your email address', 'error');
+      showToast(t('common.enterEmail'), 'error');
       return;
     }
 
     if (emailError) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast('Please enter a valid email address', 'error');
+      showToast(t('common.enterValidEmail'), 'error');
       return;
     }
 
@@ -128,7 +129,7 @@ export default function ForgotPasswordScreen() {
     try {
       await sendPasswordResetEmail(auth, email);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showToast('Reset link sent! Please check your email.', 'success');
+      showToast(t('common.resetLinkSent'), 'success');
       router.back();
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -163,7 +164,7 @@ export default function ForgotPasswordScreen() {
             style={styles.backButton} 
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={28} color="#FFF" />
+            <Ionicons name="arrow-back" size={28} color={theme.colors.white} />
           </TouchableOpacity>
           <Animated.View entering={FadeInUp.delay(200).duration(800)}>
             <Text style={[styles.headerTitle, { fontSize: sfs(32) }]}>{t('auth.forgotPassword')}</Text>
@@ -193,7 +194,7 @@ export default function ForgotPasswordScreen() {
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color="#FFF" />
+                  <ActivityIndicator color={theme.colors.white} />
                 ) : (
                   <Text style={[styles.buttonText, { fontSize: sfs(16) }]}>{t('auth.resetLink')}</Text>
                 )}

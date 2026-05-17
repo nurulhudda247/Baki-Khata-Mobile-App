@@ -58,3 +58,15 @@ export const deleteProduct = async (id: string) => {
   
   return await execute('UPDATE products SET is_deleted = 1, is_dirty = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?', [id, userId]);
 };
+
+export const getAllShopkeeperProducts = async (shopType: 'business' | 'personal' = 'business'): Promise<Product[]> => {
+  const userId = getCurrentUserId();
+  if (!userId) return [];
+  return await queryAll<Product>(
+    `SELECT p.* FROM products p 
+     JOIN shops s ON p.shop_id = s.id 
+     WHERE p.user_id = ? AND s.type = ? AND p.is_deleted = 0 AND s.is_deleted = 0 
+     ORDER BY p.category ASC, p.name ASC`,
+    [userId, shopType]
+  );
+};

@@ -40,11 +40,19 @@ export const ShopCard: React.FC<ShopCardProps> = React.memo(({ shop, onPress }) 
         <View style={styles.info}>
           <Text style={[styles.name, { color: theme.colors.textPrimary, fontSize: sfs(20) }]}>{shop.name}</Text>
           <View style={styles.infoRow}>
-            <Ionicons name="location-outline" size={sfs(24)} color={theme.colors.textSecondary} />
+            <Ionicons name="location-outline" size={sfs(14)} color={theme.colors.textSecondary} />
             <Text style={[styles.address, { color: theme.colors.textSecondary, fontSize: sfs(13) }]} numberOfLines={1}>
               {shop.address || t('common.noData')}
             </Text>
           </View>
+          {shop.phone && (
+            <View style={styles.infoRow}>
+              <Ionicons name="call-outline" size={sfs(14)} color={theme.colors.textSecondary} />
+              <Text style={[styles.address, { color: theme.colors.textSecondary, fontSize: sfs(13) }]} numberOfLines={1}>
+                {shop.phone}
+              </Text>
+            </View>
+          )}
         </View>
         <Ionicons name="chevron-forward" size={sfs(24)} color={theme.colors.textMuted} />
       </View>

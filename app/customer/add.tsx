@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, TouchableOpacity, Text, StatusBar } from 'react-native';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, TouchableOpacity, Text, StatusBar, Image } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { useTranslation } from 'react-i18next';
 import { createCustomer } from '../../database/customers';
-import { Input } from '../../components/ui/Input';
+import { FloatingLabelInput } from '../../components/ui/FloatingLabelInput';
 import { Button } from '../../components/ui/Button';
 import { Avatar } from '../../components/ui/Avatar';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
+import { getAllCustomersWithBalance } from '../../database/customers';
 
-const getStyles = (theme: any, sfs: any) => StyleSheet.create({
+import { Theme } from '../../constants/darkTheme';
+
+const getStyles = (theme: Theme, sfs: (s: number) => number) => StyleSheet.create({
   container: { flex: 1 },
   header: {
     paddingHorizontal: 24,
@@ -27,7 +32,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-    shadowColor: '#000',
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -36,21 +41,36 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
   headerTitle: { fontSize: sfs(20), fontWeight: 'bold' },
   scrollContent: { padding: 24, paddingBottom: 60 },
   imageSection: { alignItems: 'center', marginBottom: 32 },
-  avatarContainer: { position: 'relative' },
+  imageHint: { marginTop: 16, fontSize: sfs(14), fontWeight: '600', opacity: 0.7 },
+  avatarWrapper: {
+    padding: 8,
+    borderRadius: 75,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  avatarContainer: { 
+    position: 'relative',
+    borderWidth: 4,
+    borderRadius: 65,
+  },
   cameraIcon: {
     position: 'absolute',
-    right: 4,
-    bottom: 4,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    right: -4,
+    bottom: -4,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'white',
+    borderWidth: 4,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  imageHint: { marginTop: 12, fontSize: sfs(16), fontWeight: '500' },
-  saveBtn: { marginTop: 20 },
+  saveBtn: { marginTop: 12, height: 56, borderRadius: 16 },
 });
 
 export default function AddCustomer() {
@@ -59,6 +79,7 @@ export default function AddCustomer() {
   const { showToast } = useToast();
   const styles = getStyles(theme, sfs);
   const { t } = useTranslation();
+  const { isGuest } = useAuth();
   const router = useRouter();
 
   const [name, setName] = useState('');
@@ -81,7 +102,32 @@ export default function AddCustomer() {
     });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      const asset = result.assets[0];
+      const uri = asset.uri;
+
+      // Validate file size
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        if (fileInfo.exists) {
+          const sizeMB = fileInfo.size / (1024 * 1024);
+          if (sizeMB > 1) {
+            showToast(t('settings.fileTooLarge'), 'warning');
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to get file info:', e);
+      }
+
+      // Validate file type
+      const extension = uri.split('.').pop()?.toLowerCase();
+      const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+      if (!extension || !validExtensions.includes(extension)) {
+        showToast(t('settings.invalidFileType'), 'warning');
+        return;
+      }
+
+      setImageUri(uri);
     }
   };
 
@@ -91,14 +137,48 @@ export default function AddCustomer() {
       return;
     }
 
-    if (!shopId) {
-      showToast(t('common.error'), 'error');
-      return;
+    if (isGuest) {
+      try {
+        const customers = await getAllCustomersWithBalance();
+        if (customers.length >= 5) {
+          Alert.alert(
+            t('auth.customerLimitReached'),
+            t('auth.customerLimitMsg'),
+            [
+              { text: t('common.skip'), style: 'cancel' },
+              { text: t('common.login'), onPress: () => router.push('/(auth)/login') }
+            ]
+          );
+          return;
+        }
+      } catch (e) {
+        console.error('Limit check failed', e);
+      }
     }
 
     setLoading(true);
+    let targetShopId = shopId as string;
+    
+    if (!targetShopId) {
+      try {
+        const { getPrimaryShop } = await import('../../database/shops');
+        const shop = await getPrimaryShop('business');
+        if (shop) {
+          targetShopId = shop.id;
+        }
+      } catch (e) {
+        console.error('Failed to fetch primary shop', e);
+      }
+    }
+
+    if (!targetShopId) {
+      showToast(t('common.error'), 'error');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await createCustomer(shopId as string, name.trim(), phone.trim(), imageUri);
+      await createCustomer(targetShopId, name.trim(), phone.trim(), imageUri);
       showToast(t('common.success'), 'success');
       router.back();
     } catch (e) {
@@ -130,26 +210,24 @@ export default function AddCustomer() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.imageSection}>
-            <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
-              <View style={styles.avatarContainer}>
-                <Avatar name={name || 'New Customer'} uri={imageUri} size={sfs(24)} />
+            <TouchableOpacity onPress={pickImage} activeOpacity={0.8} style={styles.avatarWrapper}>
+              <View style={[styles.avatarContainer, { borderColor: theme.colors.primary + '30' }]}>
+                <Avatar name={name || 'Customer'} uri={imageUri} size={sfs(120)} />
                 <View style={[styles.cameraIcon, { backgroundColor: theme.colors.primary, borderColor: theme.colors.surface }]}>
-                  <Ionicons name="camera" size={sfs(24)} color="white" />
+                  <Ionicons name="camera" size={sfs(20)} color={theme.colors.white} />
                 </View>
               </View>
             </TouchableOpacity>
             <Text style={[styles.imageHint, { color: theme.colors.textSecondary }]}>{t('customer.addPhoto')}</Text>
           </View>
 
-          <Input
+          <FloatingLabelInput
             label={t('customer.name')}
-            placeholder={t('customer.name')}
             value={name}
             onChangeText={setName}
           />
-          <Input
+          <FloatingLabelInput
             label={t('customer.phone')}
-            placeholder={t('customer.phone')}
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"

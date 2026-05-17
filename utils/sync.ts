@@ -1,4 +1,5 @@
 import { collection, doc, setDoc, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from './firebase';
 import { getDb, queryAll, execute, markSynced, getCurrentUserId } from '../database/db';
 import { parseDatabaseTimestamp } from './dateUtils';
@@ -89,6 +90,7 @@ export const syncData = async () => {
     }
 
     console.log('Sync completed successfully');
+    await AsyncStorage.setItem('lastSyncTime', new Date().toISOString());
   } catch (error) {
     console.error('Sync failed:', error);
   } finally {

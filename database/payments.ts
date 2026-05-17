@@ -112,9 +112,3 @@ export const updatePayment = async (
     [newAmount, newNote, JSON.stringify(editHistory), id, userId]
   );
 };
-
-export const deletePayment = async (id: string) => {
-  const userId = getCurrentUserId();
-  if (!userId) throw new Error('No user logged in');
-  return await execute('UPDATE payments SET is_deleted = 1, is_dirty = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?', [id, userId]);
-};

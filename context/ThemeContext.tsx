@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { darkTheme } from '../constants/darkTheme';
 import { lightTheme } from '../constants/lightTheme';
 import { Theme } from '../constants/darkTheme';
+import { useAppContext } from './AppContext';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -44,10 +45,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const { updateSettings } = useAppContext();
+
   const setMode = async (newMode: ThemeMode) => {
     setModeState(newMode);
     try {
       await AsyncStorage.setItem('themeMode', newMode);
+      await updateSettings({ theme: newMode });
     } catch (e) {
       console.error('Failed to save theme', e);
     }

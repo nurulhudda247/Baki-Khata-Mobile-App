@@ -18,11 +18,7 @@ export interface Transaction {
   edit_history?: string;
 }
 
-export const getTransactionById = async (id: string): Promise<Transaction | null> => {
-  const userId = getCurrentUserId();
-  if (!userId) return null;
-  return await queryFirst<Transaction>('SELECT * FROM transactions WHERE id = ? AND user_id = ?', [id, userId]);
-};
+
 
 export const getTransactionsByShopId = async (shopId: string, limit: number = 50, offset: number = 0): Promise<any[]> => {
   const userId = getCurrentUserId();
@@ -150,8 +146,34 @@ export const updateTransaction = async (
   );
 };
 
-export const deleteTransaction = async (id: string) => {
+
+
+export const getOldestUnpaidTransactionDate = async (customerId: string): Promise<string | null> => {
   const userId = getCurrentUserId();
-  if (!userId) throw new Error('No user logged in');
-  return await execute('UPDATE transactions SET is_deleted = 1, is_dirty = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?', [id, userId]);
+  if (!userId) return null;
+
+  const query = `
+    WITH Calc AS (
+      SELECT 
+        t.transaction_date,
+        t.total_amount,
+        t.created_at,
+        (
+          SELECT IFNULL(SUM(pay.amount), 0) 
+          FROM payments pay 
+          WHERE pay.customer_id = t.customer_id AND pay.is_deleted = 0 AND pay.user_id = t.user_id
+        ) as customer_total_payments,
+        SUM(t.total_amount) OVER (PARTITION BY t.customer_id ORDER BY t.created_at ASC, t.id ASC) as running_total_inclusive
+      FROM transactions t
+      WHERE t.customer_id = ? AND t.user_id = ? AND t.is_deleted = 0
+    )
+    SELECT transaction_date
+    FROM Calc
+    WHERE customer_total_payments < running_total_inclusive
+    ORDER BY created_at ASC
+    LIMIT 1
+  `;
+  const row = await queryFirst<any>(query, [customerId, userId]);
+  return row ? row.transaction_date : null;
 };
+

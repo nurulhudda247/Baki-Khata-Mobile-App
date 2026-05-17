@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { createPayment } from '../../database/payments';
 import { getCurrentDateBD } from '../../utils/dateUtils';
 import { getCustomerById, Customer } from '../../database/customers';
-import { Input } from '../../components/ui/Input';
+import { FloatingLabelInput } from '../../components/ui/FloatingLabelInput';
 import { Button } from '../../components/ui/Button';
 import { Avatar } from '../../components/ui/Avatar';
 
@@ -100,25 +100,22 @@ export default function RecordPayment() {
           </View>
         )}
 
-        <Input
+        <FloatingLabelInput
           label={t('payment.paymentAmount')}
-          placeholder="0.00"
           value={amount}
           onChangeText={setAmount}
           keyboardType="numeric"
           inputStyle={styles.amountInput}
         />
         
-        <Input
+        <FloatingLabelInput
           label={t('shop.date')}
           value={date}
           onChangeText={setDate}
-          placeholder="YYYY-MM-DD"
         />
 
-        <Input
+        <FloatingLabelInput
           label={t('payment.noteOptional')}
-          placeholder={t('payment.notePlaceholder')}
           value={note}
           onChangeText={setNote}
           multiline

@@ -10,11 +10,12 @@ import {
   StatusBar,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../utils/firebase';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
@@ -27,7 +28,6 @@ import { useAppContext } from '../../context/AppContext';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { migrateGuestData, deleteUserData, setCurrentUserId } from '../../database/db';
 import { syncData } from '../../utils/sync';
-import { Alert } from 'react-native';
 
 // Configure native Google Sign-In once
 GoogleSignin.configure({
@@ -36,7 +36,9 @@ GoogleSignin.configure({
 
 const { height } = Dimensions.get('window');
 
-const getStyles = (theme: any, sfs: any) => StyleSheet.create({
+import { Theme } from '../../constants/darkTheme';
+
+const getStyles = (theme: Theme, sfs: (s: number) => number) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -53,7 +55,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: theme.colors.white + '33', // 0.2 opacity
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -67,12 +69,12 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    color: '#FFF',
+    color: theme.colors.white,
     fontFamily: 'Inter_700Bold',
     letterSpacing: -1,
   },
   headerSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
+    color: theme.colors.white + 'CC', // 0.8 opacity
     fontFamily: 'Inter_400Regular',
     marginTop: 4,
   },
@@ -121,14 +123,14 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
-    shadowColor: '#000',
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 10,
   },
   buttonText: {
-    color: '#FFF',
+    color: theme.colors.white,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.8,
   },
@@ -209,7 +211,7 @@ export default function LoginScreen() {
   const { theme, sfs, mode } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = getStyles(theme, sfs);
-  const { continueAsGuest, signInWithGoogle } = useAuth();
+  const { continueAsGuest, signInWithGoogle, signInWithEmail } = useAuth();
   const { refreshUserProfile } = useAppContext();
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -222,10 +224,27 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
 
+  // Clear active profile logic has been moved to AuthContext and is handled 
+  // during the sign-in process to avoid breaking the guest role lock.
+  React.useEffect(() => {
+    // No-op to maintain component structure if needed, or just remove
+  }, []);
+
+  // Always navigate to '/' after login.
+  // index.tsx handles routing to profile-selection, shopkeeper, or personal
+  // based on the fully-loaded roles (AuthContext sets isLoading=true while fetching).
+  const navigateAfterLogin = () => router.replace('/');
+
   // Native Google Sign-In using Google Play Services (no browser, no redirect URI)
   const signInWithGoogleNative = async () => {
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      
+      // Force account picker
+      try {
+        await GoogleSignin.signOut();
+      } catch (e) {}
+      
       const userInfo = await GoogleSignin.signIn();
       const idToken = userInfo.data?.idToken;
       if (idToken) {
@@ -248,34 +267,37 @@ export default function LoginScreen() {
   };
 
   async function handleGoogleSignIn(idToken: string) {
+    const wasGuest = isGuest;
     setLoading(true);
     try {
       await signInWithGoogle(idToken);
       await refreshUserProfile();
-      
-      if (isGuest) {
+
+      if (wasGuest) {
         Alert.alert(
-          t('auth.guestDataSync', 'Sync Offline Data?'),
-          t('auth.guestDataSyncMsg', 'You have offline guest data. Do you want to merge it with your account?'),
+          t('auth.guestDataSync'),
+          t('auth.guestDataSyncMsg'),
           [
             {
-              text: t('common.discard', 'Discard'),
+              text: t('common.discard'),
               style: 'destructive',
               onPress: async () => {
                 await deleteUserData('guest');
                 await syncData();
                 await refreshUserProfile();
-                showToast('Welcome!', 'success');
+                showToast(t('common.welcome'), 'success');
+                navigateAfterLogin();
               }
             },
             {
-              text: t('common.merge', 'Merge'),
+              text: t('common.merge'),
               onPress: async () => {
                 if (auth.currentUser) {
                   await migrateGuestData(auth.currentUser.uid);
                   await syncData();
                   await refreshUserProfile();
-                  showToast('Welcome! Data synced.', 'success');
+                  showToast(t('common.welcome'), 'success');
+                  navigateAfterLogin();
                 }
               }
             }
@@ -284,7 +306,8 @@ export default function LoginScreen() {
       } else {
         await syncData();
         await refreshUserProfile();
-        showToast('Welcome!', 'success');
+        showToast(t('common.welcome'), 'success');
+        navigateAfterLogin();
       }
     } catch (error: any) {
       showToast('Google Sign-In failed', 'error');
@@ -293,22 +316,23 @@ export default function LoginScreen() {
     }
   }
 
-  async function signInWithEmail() {
+  async function handleEmailSignIn() {
     if (!email || !password) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast('Please enter both email and password', 'error');
+      showToast(t('common.enterEmailPass'), 'error');
       return;
     }
 
+    const wasGuest = isGuest;
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const { userCredential } = await signInWithEmail(email, password);
       setCurrentUserId(userCredential.user.uid);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      if (isGuest) {
+
+      if (wasGuest) {
         Alert.alert(
           t('auth.guestDataSync', 'Sync Offline Data?'),
           t('auth.guestDataSyncMsg', 'You have offline guest data. Do you want to merge it with your account?'),
@@ -320,7 +344,8 @@ export default function LoginScreen() {
                 await deleteUserData('guest');
                 await syncData();
                 await refreshUserProfile();
-                showToast('Welcome back!', 'success');
+                showToast(t('common.welcomeBack'), 'success');
+                navigateAfterLogin();
               }
             },
             {
@@ -329,7 +354,8 @@ export default function LoginScreen() {
                 await migrateGuestData(userCredential.user.uid);
                 await syncData();
                 await refreshUserProfile();
-                showToast('Welcome back! Data synced.', 'success');
+                showToast(t('common.welcomeBack'), 'success');
+                navigateAfterLogin();
               }
             }
           ]
@@ -337,7 +363,8 @@ export default function LoginScreen() {
       } else {
         await syncData();
         await refreshUserProfile();
-        showToast('Welcome back!', 'success');
+        showToast(t('common.welcomeBack'), 'success');
+        navigateAfterLogin();
       }
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -347,7 +374,6 @@ export default function LoginScreen() {
       } else if (error.code === 'auth/wrong-password') {
         message = t('auth.wrongPassword', 'Invalid email or password.');
       } else {
-        // Clean up Firebase specific formatting
         message = message.replace(/^Firebase:\s*/i, '');
         message = message.replace(/Error\s*\([^)]+\)\.?\s*/i, '').trim();
         message = message.replace(/\([^)]+\)\.?\s*/i, '').trim();
@@ -370,9 +396,9 @@ export default function LoginScreen() {
           style={styles.logoContainer}
         >
           <Image 
-            source={require('../../assets/adaptive-icon.png')} 
+            source={require('../../assets/icon.png')} 
             style={styles.logo}
-            tintColor="#FFF"
+            tintColor={theme.colors.white}
           />
         </Animated.View>
         <Animated.View 
@@ -403,7 +429,7 @@ export default function LoginScreen() {
             borderTopRightRadius: 40,
             zIndex: 1,
             elevation: 10,
-            shadowColor: '#000',
+            shadowColor: theme.colors.black,
             shadowOffset: { width: 0, height: -10 },
             shadowOpacity: 0.1,
             shadowRadius: 15,
@@ -461,12 +487,12 @@ export default function LoginScreen() {
 
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: theme.colors.primary }]}
-                onPress={signInWithEmail}
+                onPress={handleEmailSignIn}
                 activeOpacity={0.8}
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color="#FFF" />
+                  <ActivityIndicator color={theme.colors.white} />
                 ) : (
                   <Text style={[styles.buttonText, { fontSize: sfs(17) }]}>{t('auth.signIn')}</Text>
                 )}
@@ -474,7 +500,7 @@ export default function LoginScreen() {
 
               <View style={styles.orDivider}>
                 <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
-                <Text style={[styles.dividerText, { color: theme.colors.textSecondary }]}>OR</Text>
+                <Text style={[styles.dividerText, { color: theme.colors.textSecondary }]}>{t('common.or')}</Text>
                 <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
               </View>
 
@@ -508,7 +534,7 @@ export default function LoginScreen() {
 
               <View style={styles.guestDivider}>
                 <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
-                <Text style={[styles.dividerText, { color: theme.colors.textSecondary }]}>OR</Text>
+                <Text style={[styles.dividerText, { color: theme.colors.textSecondary }]}>{t('common.or')}</Text>
                 <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
               </View>
 

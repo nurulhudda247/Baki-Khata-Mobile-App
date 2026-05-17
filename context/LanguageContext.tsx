@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../i18n';
+import { useAppContext } from './AppContext';
 
 type Language = 'en' | 'bn';
 
@@ -26,11 +27,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     loadLanguage();
   }, []);
 
+  const { updateSettings } = useAppContext();
+
   const setLanguage = async (lang: Language) => {
     try {
       await i18n.changeLanguage(lang);
       setLanguageState(lang);
       await AsyncStorage.setItem('user-language', lang);
+      await updateSettings({ language: lang });
     } catch (e) {
       console.error('Failed to change language', e);
     }

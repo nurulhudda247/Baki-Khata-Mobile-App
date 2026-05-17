@@ -5,14 +5,31 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { useTranslation } from 'react-i18next';
-import { createProduct, updateProduct, getProductById } from '../../database/products';
-import { Input } from '../../components/ui/Input';
+import { createProduct, updateProduct, getProductById, getAllShopkeeperProducts } from '../../database/products';
+import { useAuth } from '../../context/AuthContext';
+import { FloatingLabelInput } from '../../components/ui/FloatingLabelInput';
 import { Button } from '../../components/ui/Button';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
-const CATEGORIES = ['Grocery', 'Medicine', 'Food', 'Cigarette', 'Tea', 'Other'];
+const CATEGORIES = ['Grocery', 'Medicine', 'Food', 'Cigarette', 'Tea', 'Stationery', 'Electronics', 'Cosmetics', 'Clothing', 'Recharge', 'Other'];
 
-const getStyles = (theme: any, sfs: any) => StyleSheet.create({
+const CATEGORY_ICONS: Record<string, string> = {
+  Grocery: 'basket-outline',
+  Medicine: 'medical-outline',
+  Food: 'fast-food-outline',
+  Cigarette: 'flame-outline',
+  Tea: 'cafe-outline',
+  Stationery: 'pencil-outline',
+  Electronics: 'flash-outline',
+  Cosmetics: 'sparkles-outline',
+  Clothing: 'shirt-outline',
+  Recharge: 'phone-portrait-outline',
+  Other: 'grid-outline'
+};
+
+import { Theme } from '../../constants/darkTheme';
+
+const getStyles = (theme: Theme, sfs: (s: number) => number) => StyleSheet.create({
   container: { flex: 1 },
   header: {
     paddingHorizontal: 24,
@@ -34,7 +51,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-    shadowColor: '#000',
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
@@ -57,13 +74,17 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
     marginBottom: 24,
   },
   categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
     borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: '30%',
   },
   categoryText: {
-    fontSize: sfs(16), fontWeight: '600',
+    fontSize: sfs(14), fontWeight: '600',
+    marginLeft: 8,
   },
   saveBtn: {
     marginTop: 20,
@@ -74,6 +95,7 @@ export default function AddProduct() {
   const { shopId, productId } = useLocalSearchParams();
   const { theme, mode, sfs } = useTheme();
   const { showToast } = useToast();
+  const { isGuest, activeProfile } = useAuth();
   const styles = getStyles(theme, sfs);
   const { t } = useTranslation();
   const router = useRouter();
@@ -111,6 +133,25 @@ export default function AddProduct() {
     if (!name.trim() || !price.trim()) {
       showToast(t('product.enterDetails'), 'warning');
       return;
+    }
+
+    if (!isEditing && isGuest) {
+      try {
+        const products = await getAllShopkeeperProducts(activeProfile === 'personal' ? 'personal' : 'business');
+        if (products.length >= 10) {
+          Alert.alert(
+            t('auth.productLimitReached'),
+            t('auth.productLimitMsg'),
+            [
+              { text: t('common.skip'), style: 'cancel' },
+              { text: t('common.login'), onPress: () => router.push('/(auth)/login') }
+            ]
+          );
+          return;
+        }
+      } catch (e) {
+        console.error('Limit check failed', e);
+      }
     }
 
     setLoading(true);
@@ -156,22 +197,19 @@ export default function AddProduct() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Input
+        <FloatingLabelInput
           label={t('productAdd.productName')}
-          placeholder={t('productAdd.namePlaceholder')}
           value={name}
           onChangeText={setName}
         />
-        <Input
+        <FloatingLabelInput
           label={t('productAdd.price')}
-          placeholder="0.00"
           value={price}
           onChangeText={setPrice}
           keyboardType="numeric"
         />
-        <Input
+        <FloatingLabelInput
           label={t('productAdd.unit')}
-          placeholder={t('productAdd.unitPlaceholder')}
           value={unit}
           onChangeText={setUnit}
         />
@@ -180,7 +218,7 @@ export default function AddProduct() {
         <View style={styles.categoryContainer}>
           {CATEGORIES.map((cat) => (
             <TouchableOpacity
-              key={t('categories.' + cat)}
+              key={cat}
               style={[
                 styles.categoryChip,
                 { 
@@ -190,9 +228,14 @@ export default function AddProduct() {
               ]}
               onPress={() => setCategory(cat)}
             >
+              <Ionicons 
+                name={CATEGORY_ICONS[cat] as any} 
+                size={sfs(18)} 
+                color={category === cat ? theme.colors.white : theme.colors.primary} 
+              />
               <Text style={[
                 styles.categoryText,
-                { color: category === cat ? 'white' : theme.colors.textPrimary }
+                { color: category === cat ? theme.colors.white : theme.colors.textPrimary }
               ]}>
                 {t('categories.' + cat)}
               </Text>

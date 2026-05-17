@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert, Platform, StatusBar, TextInput, Modal, Linking, TouchableWithoutFeedback, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert, Platform, StatusBar, TextInput, Modal, Linking, TouchableWithoutFeedback, ActivityIndicator, Image } from 'react-native';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
+import { Theme } from '../constants/darkTheme';
 import { useLanguage } from '../context/LanguageContext';
 import { useAppContext } from '../context/AppContext';
 import { useTranslation } from 'react-i18next';
@@ -16,8 +17,12 @@ import * as FileSystem from 'expo-file-system';
 import { useAuth } from '../context/AuthContext';
 import { syncData } from '../utils/sync';
 import { BottomModal } from '../components/ui/BottomModal';
+import { getPrimaryShop, updateShopProfile } from '../database/shops';
+import { deleteUserData, getPendingSyncCount } from '../database/db';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { formatDateLabel, formatTimeLabel } from '../utils/dateUtils';
 
-const getStyles = (theme: any, sfs: any) => StyleSheet.create({
+const getStyles = (theme: Theme, sfs: (s: number) => number) => StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 24, paddingTop: Platform.OS === 'android' ? 40 : 20, paddingBottom: 24, flexDirection: 'row', alignItems: 'center' },
   backBtn: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
@@ -27,7 +32,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
   scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },
   profileCard: { flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: 24, marginBottom: 32 },
   profileAvatar: { width: 64, height: 64, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 16, overflow: 'hidden' },
-  avatarText: { color: 'white', fontSize: sfs(16), fontWeight: 'bold' },
+  avatarText: { color: theme.colors.white, fontSize: sfs(16), fontWeight: 'bold' },
   profileInfo: { flex: 1 },
   profileName: { fontSize: sfs(18), fontWeight: 'bold', marginBottom: 2 },
   section: { marginBottom: 32 },
@@ -52,7 +57,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
   modalImageBox: { width: '100%', height: '100%', borderRadius: 16, borderWidth: 1, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
   modalPreviewImage: { width: '100%', height: '100%' },
   imagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  editIconBadge: { position: 'absolute', bottom: -4, right: -4, width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: 'white', zIndex: 10 },
+  editIconBadge: { position: 'absolute', bottom: -4, right: -4, width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: theme.colors.surface, zIndex: 10 },
   removePhotoBtn: { paddingVertical: 4 },
   inputGroup: { marginBottom: 24 },
   inputLabel: { fontSize: sfs(12), marginBottom: 8, fontWeight: '700', color: theme.colors.textSecondary, opacity: 0.9 },
@@ -63,33 +68,17 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
   fontSizeContainer: { flexDirection: 'row', borderRadius: 20, padding: 4, justifyContent: 'space-between' },
   fontSizeOption: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 16, gap: 4 },
   fontSizeLabel: { fontSize: sfs(12), fontWeight: 'bold' },
-  accountCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 12,
-  },
-  accountIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  accountCardBody: {
-    flex: 1,
-  },
-  accountCardTitle: {
-    fontSize: sfs(16),
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  accountCardSub: {
-    fontSize: sfs(13),
-    opacity: 0.8,
-  },
+  accountCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 20, marginBottom: 12 },
+  accountIconContainer: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  accountCardBody: { flex: 1 },
+  accountCardTitle: { fontSize: sfs(16), fontWeight: '700', marginBottom: 2 },
+  accountCardSub: { fontSize: sfs(13), opacity: 0.8 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 12 },
+  menuIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  menuContent: { flex: 1 },
+  menuText: { fontSize: sfs(16), fontWeight: '600' },
+  menuSubtext: { fontSize: sfs(12) },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
 
 export default function Settings() {
@@ -98,7 +87,7 @@ export default function Settings() {
   const styles = getStyles(theme, sfs);
   const { language, setLanguage } = useLanguage();
   const { userProfile, updateProfile } = useAppContext();
-  const { user, isGuest, signOut, deleteAccount, reauthenticateAndDelete } = useAuth();
+  const { user, isGuest, signOut, deleteAccount, deleteActiveProfile, reauthenticateAndDelete, userRole, activeProfile, hasBothRoles } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -111,15 +100,55 @@ export default function Settings() {
   const [newName, setNewName] = useState(userProfile?.name || '');
   const [newImageUri, setNewImageUri] = useState<string | null>(userProfile?.image_uri || null);
   const [isNameFocused, setIsNameFocused] = useState(false);
-  const [isClearCacheVisible, setClearCacheVisible] = useState(false);
   const [isLogoutConfirmVisible, setLogoutConfirmVisible] = useState(false);
   const [isDeleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isClearing, setIsClearing] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  const [isDeleteProfileVisible, setDeleteProfileVisible] = useState(false);
+  const [isResetModalVisible, setResetModalVisible] = useState(false);
+  const [shopName, setShopName] = useState('');
+  const [shopId, setShopId] = useState<string | null>(null);
+  const [isShopNameFocused, setIsShopNameFocused] = useState(false);
+  const [isDeletePasswordFocused, setIsDeletePasswordFocused] = useState(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+
+  const isShopkeeper = activeProfile === 'shopkeeper';
+
+  useEffect(() => {
+    if (isShopkeeper) {
+      getPrimaryShop('business').then(shop => {
+        if (shop) {
+          setShopId(shop.id);
+          setShopName(shop.name);
+        }
+      });
+    }
+    
+    const fetchSyncStatus = async () => {
+      const count = await getPendingSyncCount();
+      const time = await AsyncStorage.getItem('lastSyncTime');
+      setPendingSyncCount(count);
+      setLastSyncTime(time);
+    };
+    fetchSyncStatus();
+  }, [isShopkeeper]);
 
   const isPasswordProvider = user?.providerData.some((p: any) => p.providerId === 'password');
+
+
+  const handleResetGuestData = async () => {
+    try {
+      await deleteUserData('guest');
+      await signOut();
+      showToast(t('settings.resetSuccess'), 'success');
+      router.replace('/(auth)/login');
+    } catch (e) {
+      console.error('Reset failed', e);
+      showToast(t('common.error'), 'error');
+    }
+  };
 
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -133,16 +162,91 @@ export default function Settings() {
       aspect: [1, 1],
       quality: 0.5,
     });
-    if (!result.canceled) { setNewImageUri(result.assets[0].uri); }
+    if (!result.canceled) { 
+      const asset = result.assets[0];
+      const uri = asset.uri;
+
+      // Validate file size
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        if (fileInfo.exists) {
+          const sizeMB = fileInfo.size / (1024 * 1024);
+          if (sizeMB > 1) {
+            showToast(t('settings.fileTooLarge'), 'warning');
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to get file info:', e);
+      }
+
+      // Validate file type
+      const extension = uri.split('.').pop()?.toLowerCase();
+      const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+      if (!extension || !validExtensions.includes(extension)) {
+        showToast(t('settings.invalidFileType'), 'warning');
+        return;
+      }
+
+      setNewImageUri(uri); 
+    }
   };
+  
+  useEffect(() => {
+    if (isProfileModalVisible) {
+      // 1. Calculate the base name (prefer profile name, fallback to google name)
+      const currentName = userProfile?.name || '';
+      const googleName = (user?.displayName || '').trim();
+      const merchantLabel = t('settings.merchant');
+      const userLabel = t('settings.user');
+      const baseName = (currentName === 'Merchant' || currentName === 'User' || currentName === merchantLabel || currentName === userLabel || !currentName) ? (googleName || currentName) : currentName;
+      
+      const initialPreset = shopName || ((isShopkeeper && (baseName === googleName || currentName === 'Merchant' || currentName === merchantLabel) && googleName) 
+        ? t('settings.userShop', { name: googleName }) 
+        : (baseName || (isShopkeeper ? merchantLabel : userLabel)));
+        
+      setNewName(initialPreset);
+      setShopName(initialPreset);
+      setNewImageUri(userProfile?.image_uri || null);
+    }
+  }, [isProfileModalVisible, userProfile, user, isShopkeeper]);
+
+
+  useEffect(() => {
+    if (isProfileModalVisible && isShopkeeper) {
+      getPrimaryShop('business').then(shop => {
+        if (shop) {
+          setShopId(shop.id);
+          // If the shop name is generic/missing, we already have the correct preset from above
+          // If it's a custom name (different from google name), the preset logic above handles it too 
+          // because it will use userProfile.name which is synced with shop.name
+        }
+      });
+    }
+  }, [isProfileModalVisible, isShopkeeper]);
 
   const handleSaveProfile = async () => {
-    if (!newName.trim()) return;
     try {
-      await updateProfile(newName.trim(), newImageUri || '');
+      const imageToSave = newImageUri === undefined ? (userProfile?.image_uri || '') : (newImageUri || '');
+      const currentActiveRole = activeProfile || 'personal';
+      
+      if (isShopkeeper && shopId) {
+        if (!shopName.trim()) {
+          showToast(t('shop.nameRequired') || 'Shop name is required', 'warning');
+          return;
+        }
+        await updateShopProfile(shopId, shopName.trim(), imageToSave);
+        await updateProfile(shopName.trim(), imageToSave, currentActiveRole);
+      } else {
+        if (!newName.trim()) return;
+        await updateProfile(newName.trim(), imageToSave, currentActiveRole);
+      }
       setProfileModalVisible(false);
       setSuccessVisible(true);
-    } catch (e) { Alert.alert(t('common.error'), t('common.error')); }
+    } catch (e: any) { 
+      console.error('Failed to save profile:', e);
+      Alert.alert(t('common.error'), e.message || t('auth.failedUpdateProfile')); 
+    }
   };
 
   const handleRemovePhotoConfirm = () => {
@@ -152,38 +256,19 @@ export default function Settings() {
 
 
 
-  const handleClearCache = async () => {
-    setIsClearing(true);
-    try {
-      if (FileSystem.cacheDirectory) {
-        const files = await FileSystem.readDirectoryAsync(FileSystem.cacheDirectory);
-        for (const file of files) {
-          try {
-            await FileSystem.deleteAsync(FileSystem.cacheDirectory + file, { idempotent: true });
-          } catch (e) {
-            console.warn('Failed to delete cache file:', file);
-          }
-        }
-      }
-      setClearCacheVisible(false);
-      showToast(t('settings.cacheCleared'), 'success');
-    } catch (e) {
-      console.error('Failed to clear cache', e);
-      showToast(t('settings.cacheError'), 'error');
-    } finally {
-      setIsClearing(false);
-    }
-  };
-
   const handleSyncData = async () => {
     if (isGuest) {
-      Alert.alert(t('auth.loginRequired'), t('auth.loginRequiredMsg'));
+      Alert.alert(t('auth.loginRequiredSync'), t('auth.loginRequiredSyncMsg'));
       return;
     }
     setIsSyncing(true);
     try {
       await syncData();
       showToast(t('auth.syncSuccess'), 'success');
+      const count = await getPendingSyncCount();
+      const time = await AsyncStorage.getItem('lastSyncTime');
+      setPendingSyncCount(count);
+      setLastSyncTime(time);
     } catch (e) {
       showToast(t('auth.syncError'), 'error');
     } finally {
@@ -191,7 +276,9 @@ export default function Settings() {
     }
   };
 
-  const SettingItem = useCallback(({ icon, label, value, onPress, rightElement, disabled, iconColor, iconBg }: any) => (
+  const SettingItem = useCallback(({ icon, label, value, onPress, rightElement, disabled, iconColor, iconBg }: { 
+    icon: any, label: string, value?: string, onPress?: () => void, rightElement?: React.ReactNode, disabled?: boolean, iconColor?: string, iconBg?: string 
+  }) => (
     <TouchableOpacity
       style={[styles.settingItem, { backgroundColor: theme.colors.surface, opacity: disabled ? 0.5 : 1 }]}
       onPress={onPress}
@@ -230,24 +317,59 @@ export default function Settings() {
       </View>
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}>
+        {/* PROFILE CARD */}
+        <TouchableOpacity 
+          style={[styles.profileCard, { backgroundColor: theme.colors.surface }]}
+          onPress={() => setProfileModalVisible(true)}
+        >
+          <View style={[styles.profileAvatar, { backgroundColor: theme.colors.primary }]}>
+            {userProfile?.image_uri ? (
+              <Image source={{ uri: userProfile.image_uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+            ) : (
+              <Text style={styles.avatarText}>{(userProfile?.name || 'U').charAt(0).toUpperCase()}</Text>
+            )}
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={[styles.profileName, { color: theme.colors.textPrimary }]}>
+              {(() => {
+                if (isShopkeeper && shopName) return shopName;
+                const currentName = userProfile?.name || '';
+                const googleName = (user?.displayName || '').trim();
+                const merchantLabel = t('settings.merchant');
+                const userLabel = t('settings.user');
+                const baseName = (currentName === 'Merchant' || currentName === 'User' || currentName === merchantLabel || currentName === userLabel || !currentName) ? (googleName || currentName) : currentName;
+                const finalName = baseName || (isShopkeeper ? merchantLabel : userLabel);
+                return (isShopkeeper && (baseName === googleName || currentName === 'Merchant' || currentName === merchantLabel) && googleName)
+                  ? t('settings.userShop', { name: googleName })
+                  : finalName;
+              })()}
+            </Text>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: sfs(14) }}>{user?.email || t('auth.guestExplorer')}</Text>
+          </View>
+          <Ionicons name="pencil-outline" size={sfs(20)} color={theme.colors.primary} />
+        </TouchableOpacity>
+
+
+
+        {/* PREFERENCES SECTION */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('auth.accountManagement').toUpperCase()}</Text>
-          <SettingItem
-            icon="person-outline"
-            label={t('auth.profile')}
-            value={userProfile?.name || t('auth.editProfile')}
-            onPress={() => router.push('/profile')}
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('settings.preferences').toUpperCase()}</Text>
+          <SettingItem 
+            icon="moon-outline" 
+            label={t('settings.darkMode')} 
+            rightElement={<Switch value={mode === 'dark'} onValueChange={toggleTheme} trackColor={{ false: theme.colors.border, true: theme.colors.primary }} thumbColor={Platform.OS === 'ios' ? undefined : (mode === 'dark' ? theme.colors.primary : '#f4f3f4')} />} 
+          />
+          <SettingItem 
+            icon="language-outline" 
+            label={t('settings.language')} 
+            value={language === 'en' ? t('settings.english') : t('settings.bengali')} 
+            onPress={() => setLanguageModalVisible(true)} 
           />
         </View>
 
+        {/* FONT SIZE SECTION */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('settings.preferences')}</Text>
-          <SettingItem icon="moon-outline" label={t('settings.darkMode')} rightElement={<Switch value={mode === 'dark'} onValueChange={toggleTheme} trackColor={{ false: '#767577', true: theme.colors.primary }} thumbColor={Platform.OS === 'ios' ? undefined : '#f4f3f4'} />} />
-          <SettingItem icon="language-outline" label={t('settings.language')} value={language === 'en' ? t('settings.english') : t('settings.bengali')} onPress={() => setLanguageModalVisible(true)} />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('settings.fontSize')}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('settings.fontSize').toUpperCase()}</Text>
           <View style={[styles.fontSizeContainer, { backgroundColor: theme.colors.surface }]}>
             {[
               { label: t('settings.fontSizeSmall'), multiplier: 0.75, icon: 'text-outline', size: 14 },
@@ -265,11 +387,11 @@ export default function Settings() {
                 <Ionicons
                   name={item.icon as any}
                   size={sfs(item.size)}
-                  color={Math.abs(fontSizeMultiplier - item.multiplier) < 0.01 ? 'white' : theme.colors.textPrimary}
+                  color={Math.abs(fontSizeMultiplier - item.multiplier) < 0.01 ? theme.colors.white : theme.colors.textPrimary}
                 />
                 <Text style={[
                   styles.fontSizeLabel,
-                  { color: Math.abs(fontSizeMultiplier - item.multiplier) < 0.01 ? 'white' : theme.colors.textSecondary }
+                  { color: Math.abs(fontSizeMultiplier - item.multiplier) < 0.01 ? theme.colors.white : theme.colors.textSecondary }
                 ]}>
                   {item.label}
                 </Text>
@@ -278,77 +400,157 @@ export default function Settings() {
           </View>
         </View>
 
-
+        {/* DATA MANAGEMENT SECTION */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('settings.dataManagement')}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('settings.dataManagement').toUpperCase()}</Text>
+          {!isGuest && (
+            <SettingItem
+              icon="sync-outline"
+              label={isSyncing ? t('auth.syncing') : t('auth.cloudSync')}
+              value={pendingSyncCount > 0 ? t('settings.syncPending', { count: pendingSyncCount }) : (lastSyncTime ? t('settings.lastSynced', { date: formatDateLabel(lastSyncTime.split('T')[0]), time: formatTimeLabel(lastSyncTime) }) : t('auth.syncDesc'))}
+              onPress={handleSyncData}
+              disabled={isSyncing}
+              rightElement={isSyncing ? <ActivityIndicator size="small" color={theme.colors.primary} /> : (pendingSyncCount > 0 ? <View style={{ backgroundColor: theme.colors.danger, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, marginRight: 8 }}><Text style={{ color: theme.colors.white, fontSize: 10, fontWeight: 'bold' }}>{pendingSyncCount}</Text></View> : null)}
+            />
+          )}
+
           <SettingItem
-            icon="sync-outline"
-            label={isSyncing ? t('auth.syncing') : t('auth.cloudSync')}
-            value={t('auth.syncDesc')}
-            onPress={handleSyncData}
-            disabled={isSyncing}
-            rightElement={isSyncing ? <ActivityIndicator size="small" color={theme.colors.primary} /> : null}
-          />
-          <SettingItem
-            icon="trash-outline"
-            label={t('settings.clearCache')}
-            value={t('settings.cleanSpace')}
-            onPress={() => setClearCacheVisible(true)}
+            icon="trash-bin-outline"
+            label={t('settings.trashBin')}
+            value={t('settings.trashBinDesc')}
+            onPress={() => router.push('/trash')}
           />
         </View>
 
+        {/* DEVELOPER CREDITS SECTION */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('settings.developerCredits')}</Text>
-          <SettingItem
-            icon="school-outline"
-            label={t('settings.startTutorial')}
-            value={t('settings.restartTutorialDesc')}
-            onPress={() => router.push('/tutorial')}
-          />
-          <SettingItem
-            icon="rocket-outline"
-            label={t('settings.upcomingUpdates')}
-            value={t('settings.viewRoadmap')}
-            onPress={() => router.push('/upcoming')}
-          />
-          <SettingItem icon="code-slash-outline" label={t('settings.developedBy')} value="Nurul Hudda" onPress={() => Linking.openURL('https://t.me/nurulhudda247')} />
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('settings.developerCredits').toUpperCase()}</Text>
+          <SettingItem icon="school-outline" label={t('settings.startTutorial')} value={t('settings.restartTutorialDesc')} onPress={() => router.push('/tutorial')} />
+          <SettingItem icon="rocket-outline" label={t('settings.upcomingUpdates')} value={t('settings.viewRoadmap')} onPress={() => router.push('/upcoming')} />
+          <SettingItem icon="code-slash-outline" label={t('settings.developedBy')} value="Nurul Hudda" onPress={async () => {
+            try {
+              await Linking.openURL('https://t.me/nurulhudda247');
+            } catch (e) {
+              showToast('Could not open Telegram', 'error');
+            }
+          }} />
           <SettingItem icon="logo-github" label={t('settings.github')} value="nurulhudda247" onPress={() => Linking.openURL('https://github.com/nurulhudda247')} />
         </View>
 
+        {/* ACCOUNT MANAGEMENT SECTION */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('auth.accountManagement').toUpperCase()}</Text>
 
-          <TouchableOpacity
-            style={[styles.accountCard, { backgroundColor: theme.colors.surface, opacity: isGuest ? 0.5 : 1 }]}
-            onPress={() => setLogoutConfirmVisible(true)}
-            activeOpacity={0.7}
-            disabled={isGuest}
-          >
-            <View style={[styles.accountIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
-              <Ionicons name="log-out" size={sfs(24)} color={theme.colors.primary} />
-            </View>
-            <View style={styles.accountCardBody}>
-              <Text style={[styles.accountCardTitle, { color: theme.colors.textPrimary, fontSize: sfs(16) }]}>{t('auth.logout')}</Text>
-              <Text style={[styles.accountCardSub, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('auth.logoutSub')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={sfs(20)} color={theme.colors.textMuted} />
-          </TouchableOpacity>
+          {hasBothRoles && (
+            <TouchableOpacity
+              style={[styles.accountCard, { backgroundColor: theme.colors.surface, marginBottom: 16 }]}
+              onPress={() => router.replace('/profile-selection')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.accountIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
+                <Ionicons name="swap-horizontal" size={sfs(24)} color={theme.colors.primary} />
+              </View>
+              <View style={styles.accountCardBody}>
+                <Text style={[styles.accountCardTitle, { color: theme.colors.textPrimary, fontSize: sfs(16) }]}>{t('auth.switchProfile')}</Text>
+                <Text style={[styles.accountCardSub, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>
+                  {activeProfile === 'shopkeeper' ? t('auth.switchToPersonalDesc') : t('auth.switchToBusinessDesc')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={sfs(20)} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity
-            style={[styles.accountCard, { backgroundColor: theme.colors.danger + '08', borderColor: theme.colors.danger + '20', borderWidth: 1, opacity: isGuest ? 0.5 : 1 }]}
-            onPress={() => setDeleteConfirmVisible(true)}
-            activeOpacity={0.7}
-            disabled={isGuest}
-          >
-            <View style={[styles.accountIconContainer, { backgroundColor: theme.colors.danger + '15' }]}>
-              <Ionicons name="trash-sharp" size={sfs(24)} color={theme.colors.danger} />
-            </View>
-            <View style={styles.accountCardBody}>
-              <Text style={[styles.accountCardTitle, { color: theme.colors.danger, fontSize: sfs(16) }]}>{t('auth.deleteAccount')}</Text>
-              <Text style={[styles.accountCardSub, { color: theme.colors.danger + '80', fontSize: sfs(13) }]}>{t('auth.deleteAccountSub')}</Text>
-            </View>
-            <Ionicons name="warning-outline" size={sfs(20)} color={theme.colors.danger + '60'} />
-          </TouchableOpacity>
+          {isGuest ? (
+            <TouchableOpacity
+              style={[styles.accountCard, { backgroundColor: theme.colors.primary + '10', borderColor: theme.colors.primary + '30', borderWidth: 1 }]}
+              onPress={() => router.replace('/(auth)/login')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.accountIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
+                <Ionicons name="person-add" size={sfs(24)} color={theme.colors.primary} />
+              </View>
+              <View style={styles.accountCardBody}>
+                <Text style={[styles.accountCardTitle, { color: theme.colors.primary, fontSize: sfs(16) }]}>{t('auth.signUp')}</Text>
+                <Text style={[styles.accountCardSub, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('auth.joinCommunitySub')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={sfs(20)} color={theme.colors.primary} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.accountCard, { backgroundColor: theme.colors.surface }]}
+              onPress={() => setLogoutConfirmVisible(true)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.accountIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
+                <Ionicons name="log-out" size={sfs(24)} color={theme.colors.primary} />
+              </View>
+              <View style={styles.accountCardBody}>
+                <Text style={[styles.accountCardTitle, { color: theme.colors.textPrimary, fontSize: sfs(16) }]}>{t('auth.logout')}</Text>
+                <Text style={[styles.accountCardSub, { color: theme.colors.textSecondary, fontSize: sfs(13) }]}>{t('auth.logoutSub')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={sfs(20)} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          )}
+
+          {/* DELETE THIS PROFILE — only shown when user has both roles */}
+          {hasBothRoles && (
+            <TouchableOpacity
+              style={[styles.accountCard, { backgroundColor: theme.colors.danger + '08', borderColor: theme.colors.danger + '20', borderWidth: 1 }]}
+              onPress={() => setDeleteProfileVisible(true)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.accountIconContainer, { backgroundColor: theme.colors.danger + '15' }]}>
+                <Ionicons name="person-remove-outline" size={sfs(24)} color={theme.colors.danger} />
+              </View>
+              <View style={styles.accountCardBody}>
+                <Text style={[styles.accountCardTitle, { color: theme.colors.danger, fontSize: sfs(16) }]}>
+                  {t('auth.deleteThisProfile')}
+                </Text>
+                <Text style={[styles.accountCardSub, { color: theme.colors.danger + '80', fontSize: sfs(13) }]}>
+                  {activeProfile === 'shopkeeper'
+                    ? t('auth.deleteShopProfileDesc')
+                    : t('auth.deletePersonalProfileDesc')}
+                </Text>
+              </View>
+              <Ionicons name="warning-outline" size={sfs(20)} color={theme.colors.danger + '60'} />
+            </TouchableOpacity>
+          )}
+
+          {/* DELETE ACCOUNT — full deletion */}
+          {!isGuest && (
+            <TouchableOpacity
+              style={[styles.accountCard, { backgroundColor: theme.colors.danger + '08', borderColor: theme.colors.danger + '20', borderWidth: 1 }]}
+              onPress={() => setDeleteConfirmVisible(true)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.accountIconContainer, { backgroundColor: theme.colors.danger + '15' }]}>
+                <Ionicons name="trash-sharp" size={sfs(24)} color={theme.colors.danger} />
+              </View>
+              <View style={styles.accountCardBody}>
+                <Text style={[styles.accountCardTitle, { color: theme.colors.danger, fontSize: sfs(16) }]}>{t('auth.deleteAccount')}</Text>
+                <Text style={[styles.accountCardSub, { color: theme.colors.danger + '80', fontSize: sfs(13) }]}>{t('auth.deleteAccountSub')}</Text>
+              </View>
+              <Ionicons name="warning-outline" size={sfs(20)} color={theme.colors.danger + '60'} />
+            </TouchableOpacity>
+          )}
+
+          {/* RESET GUEST DATA */}
+          {isGuest && (
+            <TouchableOpacity
+              style={[styles.accountCard, { backgroundColor: theme.colors.danger + '08', borderColor: theme.colors.danger + '20', borderWidth: 1 }]}
+              onPress={() => setResetModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.accountIconContainer, { backgroundColor: theme.colors.danger + '15' }]}>
+                <Ionicons name="refresh-circle-outline" size={sfs(24)} color={theme.colors.danger} />
+              </View>
+              <View style={styles.accountCardBody}>
+                <Text style={[styles.accountCardTitle, { color: theme.colors.danger, fontSize: sfs(16) }]}>{t('settings.resetData')}</Text>
+                <Text style={[styles.accountCardSub, { color: theme.colors.danger + '80', fontSize: sfs(13) }]}>{t('settings.resetDataSub')}</Text>
+              </View>
+              <Ionicons name="alert-circle-outline" size={sfs(20)} color={theme.colors.danger + '60'} />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.footer}><Text style={[styles.footerText, { color: theme.colors.textMuted }]}>{t('settings.appFooter', { version: Constants.expoConfig?.version || '1.2.0' })}</Text></View>
@@ -363,45 +565,105 @@ export default function Settings() {
                 </TouchableOpacity>
               </View>
               <View style={styles.modalImageSection}>
-                <TouchableOpacity style={styles.modalImageWrapper} onPress={handlePickImage} activeOpacity={0.8}>
-                  <View style={[styles.modalImageBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+                <TouchableOpacity 
+                  style={styles.modalImageWrapper} 
+                  onPress={handlePickImage} 
+                  activeOpacity={0.8}
+                  disabled={isGuest}
+                >
+                  <View style={[styles.modalImageBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border, opacity: isGuest ? 0.5 : 1 }]}>
                     {newImageUri ? (
-                      <Image source={{ uri: newImageUri }} style={styles.modalPreviewImage} />
+                       <Image source={{ uri: newImageUri }} style={styles.modalPreviewImage} resizeMode="cover" />
                     ) : (
                       <View style={styles.imagePlaceholder}>
-                        <Ionicons name="camera-outline" size={sfs(24)} color={theme.colors.textMuted} />
+                        <Ionicons 
+                          name={isGuest ? "person-outline" : "camera-outline"} 
+                          size={sfs(24)} 
+                          color={theme.colors.textMuted} 
+                        />
                       </View>
                     )}
                   </View>
-                  <View style={[styles.editIconBadge, { backgroundColor: theme.colors.primary, borderColor: theme.colors.surface }]}>
-                    <Ionicons name="pencil" size={sfs(24)} color="white" />
-                  </View>
+                  {!isGuest && (
+                    <View style={[styles.editIconBadge, { backgroundColor: theme.colors.primary, borderColor: theme.colors.surface }]}>
+                      <Ionicons name="pencil" size={sfs(14)} color={theme.colors.white} />
+                    </View>
+                  )}
                 </TouchableOpacity>
-                {newImageUri && (
+                {newImageUri && !isGuest && (
                   <TouchableOpacity onPress={() => setConfirmRemoveVisible(true)} style={styles.removePhotoBtn}>
                     <Text style={{ color: theme.colors.danger, fontWeight: '600', marginTop: 12 }}>{t('shop.removePhoto')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
+              {isShopkeeper && (
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>{t('shop.name')}</Text>
+                  <TextInput
+                    style={[
+                      styles.modalInput,
+                      {
+                        backgroundColor: theme.colors.background,
+                        color: isGuest ? theme.colors.textSecondary : theme.colors.textPrimary,
+                        borderColor: isGuest ? theme.colors.border : (isShopNameFocused ? theme.colors.primary : theme.colors.border),
+                        opacity: isGuest ? 0.6 : 1
+                      },
+                      Platform.OS === 'web' && ({ outlineStyle: 'none' } as any)
+                    ]}
+                    editable={!isGuest}
+                    value={shopName}
+                    onChangeText={setShopName}
+                    onFocus={() => !isGuest && setIsShopNameFocused(true)}
+                    onBlur={() => setIsShopNameFocused(false)}
+                    placeholder={t('shop.namePlaceholder')}
+                    placeholderTextColor={theme.colors.textMuted}
+                  />
+                </View>
+              )}
+
+              {!isShopkeeper && (
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>{t('settings.yourName')}</Text>
+                  <TextInput
+                    style={[
+                      styles.modalInput,
+                      {
+                        backgroundColor: theme.colors.background,
+                        color: isGuest ? theme.colors.textSecondary : theme.colors.textPrimary,
+                        borderColor: isGuest ? theme.colors.border : (isNameFocused ? theme.colors.primary : theme.colors.border),
+                        opacity: isGuest ? 0.6 : 1
+                      },
+                      Platform.OS === 'web' && ({ outlineStyle: 'none' } as any)
+                    ]}
+                    editable={!isGuest}
+                    value={newName}
+                    onChangeText={setNewName}
+                    onFocus={() => !isGuest && setIsNameFocused(true)}
+                    onBlur={() => setIsNameFocused(false)}
+                    placeholder={t('auth.enterFullName')}
+                    placeholderTextColor={theme.colors.textMuted}
+                  />
+                </View>
+              )}
+
               <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>{t('settings.yourName')}</Text>
-                <TextInput
-                  style={[
-                    styles.modalInput,
-                    {
-                      backgroundColor: theme.colors.background,
-                      color: theme.colors.textPrimary,
-                      borderColor: isNameFocused ? theme.colors.primary : theme.colors.border
-                    },
-                    Platform.OS === 'web' && ({ outlineStyle: 'none' } as any)
-                  ]}
-                  value={newName}
-                  onChangeText={setNewName}
-                  onFocus={() => setIsNameFocused(true)}
-                  onBlur={() => setIsNameFocused(false)}
-                />
+                <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>{t('auth.email')}</Text>
+                <View style={[styles.modalInput, { backgroundColor: theme.colors.background, borderColor: theme.colors.border, justifyContent: 'center', opacity: 0.6 }]}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: sfs(16) }}>{user?.email || t('auth.guestExplorer')}</Text>
+                </View>
+                <Text style={{ fontSize: sfs(11), color: theme.colors.textMuted, marginTop: 4, marginLeft: 4 }}>{t('auth.emailLockedDesc')}</Text>
               </View>
-              <Button title={t('common.save')} onPress={handleSaveProfile} />
+              {isGuest ? (
+                <Button 
+                  title={t('auth.signUp')} 
+                  onPress={() => {
+                    setProfileModalVisible(false);
+                    router.push('/(auth)/login');
+                  }} 
+                />
+              ) : (
+                <Button title={t('common.save')} onPress={handleSaveProfile} />
+              )}
       </BottomModal>
 
 
@@ -429,15 +691,7 @@ export default function Settings() {
         onConfirm={() => setSuccessVisible(false)}
       />
 
-      <ConfirmModal
-        visible={isClearCacheVisible}
-        title={t('settings.clearCacheTitle')}
-        message={t('settings.clearCacheMsg')}
-        confirmText={isClearing ? t('common.loading') : t('settings.clearNow')}
-        onConfirm={handleClearCache}
-        onCancel={() => setClearCacheVisible(false)}
-        type="warning"
-      />
+
 
       <ConfirmModal
         visible={isLogoutConfirmVisible}
@@ -464,7 +718,7 @@ export default function Settings() {
               <Ionicons name="warning-outline" size={32} color={theme.colors.danger} />
             </View>
             <Text style={{ color: theme.colors.textPrimary, fontSize: sfs(16), textAlign: 'center', lineHeight: 24 }}>
-              {t('auth.deleteAccountMsg', 'This action cannot be undone. All your data will be permanently deleted.')}
+              {t('auth.deleteAccountMsg')}
             </Text>
           </View>
 
@@ -472,39 +726,45 @@ export default function Settings() {
             <View style={{ marginBottom: 16 }}>
               <Text style={{ color: theme.colors.textSecondary, fontSize: sfs(14), marginBottom: 8 }}>{t('auth.password')}</Text>
               <TextInput
-                style={{ height: 56, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, paddingHorizontal: 16, color: theme.colors.textPrimary, fontSize: sfs(16), backgroundColor: theme.colors.background }}
-                placeholder={t('auth.enterPassword', 'Enter your password')}
+                style={{ height: 56, borderWidth: 1, borderColor: isDeletePasswordFocused ? theme.colors.primary : theme.colors.border, borderRadius: 12, paddingHorizontal: 16, color: theme.colors.textPrimary, fontSize: sfs(16), backgroundColor: theme.colors.background }}
+                placeholder={t('auth.enterPassword')}
                 placeholderTextColor={theme.colors.textMuted}
                 secureTextEntry
                 value={deletePassword}
                 onChangeText={setDeletePassword}
+                onFocus={() => setIsDeletePasswordFocused(true)}
+                onBlur={() => setIsDeletePasswordFocused(false)}
               />
             </View>
           )}
 
           <Button 
-            title={isDeleteLoading ? t('common.loading', 'Loading...') : t('common.delete', 'Delete')} 
+            title={isDeleteLoading ? t('common.loading') : t('common.delete')} 
             onPress={async () => {
               if (isPasswordProvider && !deletePassword) {
-                showToast(t('auth.passwordRequired', 'Please enter your password'), 'warning');
+                showToast(t('auth.passwordRequired'), 'warning');
                 return;
               }
               setIsDeleteLoading(true);
               try {
                 await reauthenticateAndDelete(deletePassword);
                 setDeleteConfirmVisible(false);
-                showToast(t('auth.accountDeleted', 'Account deleted'), 'success');
+                showToast(t('auth.accountDeleted'), 'success');
                 router.replace('/(auth)/register');
               } catch (e: any) {
                 console.error(e);
-                if (e?.code === 'auth/wrong-password') {
-                  showToast(t('auth.wrongPassword', 'Incorrect password'), 'error');
+                if (e?.code === 'auth/wrong-password' || e?.message === 'PASSWORD_REQUIRED') {
+                  showToast(t('auth.wrongPassword'), 'error');
                 } else if (e?.code === 'auth/requires-recent-login') {
-                  showToast(t('auth.requiresRecentLogin', 'Please log out and log back in to delete your account.'), 'error');
-                } else if (e?.message === 'Google reauthentication failed') {
-                  showToast(t('auth.reauthFailed', 'Google authentication failed or was cancelled'), 'error');
+                  showToast(t('auth.requiresRecentLogin'), 'error');
+                } else if (e?.message === 'GOOGLE_TOKEN_MISSING') {
+                  showToast(t('auth.reauthFailed'), 'error');
+                } else if (e?.message === 'REAUTH_FAILED') {
+                  showToast(t('auth.reauthFailed'), 'error');
                 } else {
-                  showToast(t('common.error'), 'error');
+                  // Show specific error message if available
+                  const errorMsg = e?.message || e?.code || t('common.error');
+                  showToast(errorMsg, 'error');
                 }
               } finally {
                 setIsDeleteLoading(false);
@@ -515,6 +775,51 @@ export default function Settings() {
           />
         </View>
       </BottomModal>
+
+      {/* DELETE THIS PROFILE MODAL */}
+      <ConfirmModal
+        visible={isDeleteProfileVisible}
+        title={t('auth.deleteThisProfile')}
+        message={
+          activeProfile === 'shopkeeper'
+            ? t('auth.deleteShopProfileMsg')
+            : t('auth.deletePersonalProfileMsg')
+        }
+        confirmText={isDeleteLoading ? t('common.loading') : t('common.delete')}
+        onConfirm={async () => {
+          setIsDeleteLoading(true);
+          try {
+            await deleteActiveProfile();
+            setDeleteProfileVisible(false);
+            showToast(t('auth.profileDeleted'), 'success');
+            // Navigate to the remaining role's dashboard
+            const remaining = activeProfile === 'shopkeeper' ? 'personal' : 'shopkeeper';
+            if (remaining === 'shopkeeper') {
+              router.replace('/(shopkeeper)');
+            } else {
+              router.replace('/personal-dashboard');
+            }
+          } catch (e: any) {
+            showToast(t('common.error'), 'error');
+          } finally {
+            setIsDeleteLoading(false);
+          }
+        }}
+        onCancel={() => setDeleteProfileVisible(false)}
+        type="danger"
+        icon="person-remove-outline"
+      />
+
+      <ConfirmModal
+        visible={isResetModalVisible}
+        title={t('settings.resetData')}
+        message={t('settings.resetDataSub')}
+        confirmText={t('common.delete')}
+        onConfirm={handleResetGuestData}
+        onCancel={() => setResetModalVisible(false)}
+        type="danger"
+        icon="trash-outline"
+      />
 
     </View>
   );

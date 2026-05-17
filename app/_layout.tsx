@@ -69,17 +69,17 @@ const RootLayoutContent = () => {
 
   if (fontError) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F0F14' }}>
-        <Text style={{ color: 'red' }}>Font Loading Error: {fontError?.message}</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
+        <Text style={{ color: theme.colors.danger }}>Font Loading Error: {fontError?.message}</Text>
       </View>
     );
   }
 
   if (!fontsLoaded || isAppLoading || isAuthLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F0F14' }}>
-        <ActivityIndicator size="large" color="#6C5CE7" />
-        <Text style={{ color: '#F0F0F5', marginTop: 20, fontSize: sfs(16) }}>{t('common.loading')} Baki Khata...</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={{ color: theme.colors.textSecondary, marginTop: 20, fontSize: sfs(16) }}>{t('common.loading')} Baki Khata...</Text>
       </View>
     );
   }
@@ -103,9 +103,11 @@ const RootLayoutContent = () => {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="profile-selection" options={{ headerShown: false }} />
+        <Stack.Screen name="personal-dashboard" options={{ headerShown: false }} />
         <Stack.Screen name="tutorial" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(shopkeeper)" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ title: t('settings.title') }} />
         <Stack.Screen name="shop/[id]" options={{ title: t('shop.shopDetails') }} />
         <Stack.Screen name="shop/add" options={{ title: t('shop.addShop') }} />
@@ -115,6 +117,7 @@ const RootLayoutContent = () => {
         <Stack.Screen name="product/add" options={{ title: t('productAdd.addProduct') }} />
         <Stack.Screen name="transaction/add" options={{ title: t('transaction.newEntry') }} />
         <Stack.Screen name="payment/add" options={{ title: t('payment.recordPayment') }} />
+        <Stack.Screen name="trash" options={{ title: t('settings.trashBin') }} />
       </Stack>
     </>
   );

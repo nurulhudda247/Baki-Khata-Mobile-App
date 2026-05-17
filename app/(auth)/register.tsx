@@ -38,7 +38,9 @@ GoogleSignin.configure({
 
 const { height } = Dimensions.get('window');
 
-const getStyles = (theme: any, sfs: any) => StyleSheet.create({
+import { Theme } from '../../constants/darkTheme';
+
+const getStyles = (theme: Theme, sfs: (s: number) => number) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -61,12 +63,12 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#FFF',
+    color: theme.colors.white,
     fontFamily: 'Inter_700Bold',
     letterSpacing: -0.5,
   },
   headerSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
+    color: theme.colors.white + 'CC', // 0.8 opacity
     fontFamily: 'Inter_400Regular',
     marginTop: 4,
   },
@@ -112,14 +114,14 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
     marginBottom: 24,
-    shadowColor: '#000',
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
     shadowRadius: 15,
     elevation: 8,
   },
   buttonText: {
-    color: '#FFF',
+    color: theme.colors.white,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.5,
   },
@@ -197,12 +199,20 @@ export default function RegisterScreen() {
   const signInWithGoogleNative = async () => {
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      
+      // Force account picker by signing out first (local sign-out only)
+      try {
+        await GoogleSignin.signOut();
+      } catch (e) {
+        // Ignore errors if already signed out
+      }
+      
       const userInfo = await GoogleSignin.signIn();
       const idToken = userInfo.data?.idToken;
       if (idToken) {
         await handleGoogleSignIn(idToken);
       } else {
-        showToast('Google registration failed: no token', 'error');
+        showToast(t('common.googleTokenError'), 'error');
       }
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
@@ -213,41 +223,44 @@ export default function RegisterScreen() {
         showToast('Google Play Services not available', 'error');
       } else {
         console.error('Google Sign-In error', error);
-        showToast('Google registration failed', 'error');
+        showToast(t('common.googleTokenError'), 'error');
       }
     }
   };
 
   async function handleGoogleSignIn(idToken: string) {
+    const wasGuest = isGuest;
     setLoading(true);
     try {
       await signInWithGoogle(idToken, role);
-      if (role === 'shopkeeper' && shopName) await createShop(shopName);
+      if (role === 'shopkeeper' && shopName) await createShop(shopName, '', '', '', 'business');
       await refreshUserProfile();
       
-      if (isGuest) {
+      if (wasGuest) {
         Alert.alert(
-          t('auth.guestDataSync', 'Sync Offline Data?'),
-          t('auth.guestDataSyncMsg', 'You have offline guest data. Do you want to merge it with your account?'),
+          t('auth.guestDataSync'),
+          t('auth.guestDataSyncMsg'),
           [
             {
-              text: t('common.discard', 'Discard'),
+              text: t('common.discard'),
               style: 'destructive',
               onPress: async () => {
                 await deleteUserData('guest');
                 await syncData();
                 await refreshUserProfile();
-                showToast('Registration successful!', 'success');
+                showToast(t('common.registrationSuccess'), 'success');
+                router.replace('/');
               }
             },
             {
-              text: t('common.merge', 'Merge'),
+              text: t('common.merge'),
               onPress: async () => {
                 if (auth.currentUser) {
                   await migrateGuestData(auth.currentUser.uid);
                   await syncData();
                   await refreshUserProfile();
-                  showToast('Registration successful! Data synced.', 'success');
+                  showToast(t('common.registrationSuccess'), 'success');
+                  router.replace('/');
                 }
               }
             }
@@ -256,10 +269,11 @@ export default function RegisterScreen() {
       } else {
         await syncData();
         await refreshUserProfile();
-        showToast('Registration successful!', 'success');
+        showToast(t('common.registrationSuccess'), 'success');
+        router.replace('/');
       }
     } catch (error: any) {
-      showToast('Google registration failed', 'error');
+      showToast(t('common.googleTokenError'), 'error');
     } finally {
       setLoading(false);
     }
@@ -303,19 +317,19 @@ export default function RegisterScreen() {
   async function signUpWithEmail() {
     if (!email || !password || !confirmPassword || !name) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast('Please fill in all required fields', 'error');
+      showToast(t('common.fillAllFields'), 'error');
       return;
     }
 
     if (emailError || passwordError) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast('Please fix the errors before proceeding', 'error');
+      showToast(t('common.fixErrors'), 'error');
       return;
     }
 
     if (role === 'shopkeeper' && !shopName) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast('Please enter your shop name', 'error');
+      showToast(t('common.enterShopName'), 'error');
       return;
     }
 
@@ -348,10 +362,10 @@ export default function RegisterScreen() {
         await migrateGuestData(firebaseUser.uid);
       }
       await updateProfile(name, '');
-      if (role === 'shopkeeper') await createShop(shopName);
+      if (role === 'shopkeeper') await createShop(shopName, '', '', '', 'business');
       await syncData();
       await refreshUserProfile();
-      showToast('Registration successful!', 'success');
+      showToast(t('common.registrationSuccess'), 'success');
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       
@@ -389,7 +403,7 @@ export default function RegisterScreen() {
             style={styles.backButton} 
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={28} color="#FFF" />
+            <Ionicons name="arrow-back" size={28} color={theme.colors.white} />
           </TouchableOpacity>
           <Animated.View entering={FadeInUp.delay(200).duration(800)}>
             <Text style={[styles.headerTitle, { fontSize: sfs(32) }]}>{t('auth.createAccount')}</Text>
@@ -403,12 +417,12 @@ export default function RegisterScreen() {
             style={styles.formContainer}
           >
             <Animated.View layout={Layout.springify()} entering={FadeInDown.delay(300).duration(800)}>
-              <View style={[styles.roleContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+              <View style={[styles.roleContainer, { backgroundColor: isDark ? theme.colors.white + '0D' : theme.colors.black + '08' }]}>
                 <TouchableOpacity 
                   onPress={() => handleRoleSwitch('personal')}
                   style={[styles.roleBtn, role === 'personal' && { backgroundColor: theme.colors.primary }]}
                 >
-                  <Text style={[styles.roleText, { color: role === 'personal' ? '#FFF' : theme.colors.textSecondary }]}>
+                  <Text style={[styles.roleText, { color: role === 'personal' ? theme.colors.white : theme.colors.textSecondary }]}>
                     {t('settings.rolePersonal')}
                   </Text>
                 </TouchableOpacity>
@@ -416,7 +430,7 @@ export default function RegisterScreen() {
                   onPress={() => handleRoleSwitch('shopkeeper')}
                   style={[styles.roleBtn, role === 'shopkeeper' && { backgroundColor: theme.colors.primary }]}
                 >
-                  <Text style={[styles.roleText, { color: role === 'shopkeeper' ? '#FFF' : theme.colors.textSecondary }]}>
+                  <Text style={[styles.roleText, { color: role === 'shopkeeper' ? theme.colors.white : theme.colors.textSecondary }]}>
                     {t('settings.roleShopkeeper')}
                   </Text>
                 </TouchableOpacity>
@@ -492,12 +506,12 @@ export default function RegisterScreen() {
                 activeOpacity={0.9}
                 disabled={loading}
               >
-                {loading ? <ActivityIndicator color="#FFF" /> : <Text style={[styles.buttonText, { fontSize: sfs(17) }]}>{t('auth.registerNow')}</Text>}
+                {loading ? <ActivityIndicator color={theme.colors.white} /> : <Text style={[styles.buttonText, { fontSize: sfs(17) }]}>{t('auth.registerNow')}</Text>}
               </TouchableOpacity>
 
               <View style={styles.orDivider}>
                 <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
-                <Text style={[styles.dividerText, { color: theme.colors.textSecondary }]}>OR</Text>
+                <Text style={[styles.dividerText, { color: theme.colors.textSecondary }]}>{t('common.or')}</Text>
                 <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
               </View>
 

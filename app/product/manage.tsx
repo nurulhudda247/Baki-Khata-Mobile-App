@@ -8,20 +8,23 @@ import { useTranslation } from 'react-i18next';
 import { getProductsByShop, deleteProduct, Product } from '../../database/products';
 import { ProductCard } from '../../components/ProductCard';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useAuth } from '../../context/AuthContext';
 
-const getStyles = (theme: any, sfs: any) => StyleSheet.create({
+import { Theme } from '../../constants/darkTheme';
+
+const getStyles = (theme: Theme, sfs: (s: number) => number) => StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 24, paddingTop: Platform.OS === 'android' ? 40 : 20, paddingBottom: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  backBtn: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
+  backBtn: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 16, shadowColor: theme.colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
   headerTitle: { fontSize: sfs(20), fontWeight: 'bold', flex: 1 },
   listContent: { paddingHorizontal: 24, paddingBottom: 120 },
   deleteAction: { justifyContent: 'center', alignItems: 'center', width: 80, height: '100%', borderRadius: 20, marginLeft: 10 },
-  deleteActionText: { color: 'white', fontSize: sfs(16), fontWeight: 'bold', marginTop: 4 },
+  deleteActionText: { color: theme.colors.white, fontSize: sfs(16), fontWeight: 'bold', marginTop: 4 },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyIconCircle: { width: 120, height: 120, borderRadius: 60, justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
   emptyText: { textAlign: 'center', fontSize: sfs(16), paddingHorizontal: 40, lineHeight: sfs(24) },
-  fab: { position: 'absolute', right: 24, bottom: 40, width: 68, height: 68, borderRadius: 34, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  fab: { position: 'absolute', right: 24, bottom: 40, width: 68, height: 68, borderRadius: 34, justifyContent: 'center', alignItems: 'center', shadowColor: theme.colors.black, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
 });
 
 export default function ProductManage() {
@@ -29,6 +32,7 @@ export default function ProductManage() {
   const { theme, mode, sfs } = useTheme();
   const styles = getStyles(theme, sfs);
   const { t } = useTranslation();
+  const { isGuest } = useAuth();
   const router = useRouter();
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -89,7 +93,7 @@ export default function ProductManage() {
         setConfirmVisible(true);
       }}
     >
-      <Ionicons name="trash-outline" size={sfs(24)} color="white" />
+      <Ionicons name="trash-outline" size={sfs(24)} color={theme.colors.white} />
       <Text style={styles.deleteActionText}>{t('common.delete')}</Text>
     </RectButton>
   ), [closeSwipeable, theme.colors.danger, sfs, t]);
@@ -138,7 +142,25 @@ export default function ProductManage() {
         removeClippedSubviews={Platform.OS === 'android'}
       />
 
-      <TouchableOpacity style={[styles.fab, { backgroundColor: theme.colors.primary }]} onPress={() => router.push({ pathname: '/product/add', params: { shopId } })}><Ionicons name="add" size={sfs(24)} color="white" /></TouchableOpacity>
+      <TouchableOpacity 
+        style={[styles.fab, { backgroundColor: theme.colors.primary }]} 
+        onPress={() => {
+          if (isGuest && products.length >= 10) {
+            Alert.alert(
+              t('auth.productLimitReached'),
+              t('auth.productLimitMsg'),
+              [
+                { text: t('common.skip'), style: 'cancel' },
+                { text: t('common.login'), onPress: () => router.push('/(auth)/login') }
+              ]
+            );
+            return;
+          }
+          router.push({ pathname: '/product/add', params: { shopId } });
+        }}
+      >
+        <Ionicons name="add" size={sfs(24)} color={theme.colors.white} />
+      </TouchableOpacity>
 
       {/* CONFIRMATION MODAL */}
       <ConfirmModal 

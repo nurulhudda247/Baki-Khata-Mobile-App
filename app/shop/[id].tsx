@@ -19,21 +19,23 @@ import { getCategoryIcon } from '../../utils/productUtils';
 import { formatDateLabel, formatTimeLabel, getCurrentDateBD } from '../../utils/dateUtils';
 import { BottomModal } from '../../components/ui/BottomModal';
 
+import { Theme } from '../../constants/darkTheme';
+
 type HistoryTab = 'DEBT' | 'PAYMENT';
 
-const getStyles = (theme: any, sfs: any, insets: any) => StyleSheet.create({
+const getStyles = (theme: Theme, sfs: (s: number) => number, insets: any) => StyleSheet.create({
   container: { flex: 1 },
   headerSection: { padding: 20, paddingTop: 12 },
   customAppBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   appBarLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   headerShopName: { fontSize: sfs(18), fontWeight: 'bold', marginLeft: 16, flex: 1 },
   iconBtn: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  balanceCard: { padding: 24, borderRadius: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 5 },
+  balanceCard: { padding: 24, borderRadius: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, shadowColor: theme.colors.black, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 5 },
   balanceLabel: { color: 'rgba(255,255,255,0.8)', fontSize: sfs(12), marginBottom: 4 },
-  balanceAmount: { color: 'white', fontSize: sfs(16), fontWeight: 'bold' },
+  balanceAmount: { color: theme.colors.white, fontSize: sfs(16), fontWeight: 'bold' },
   balanceIcon: { backgroundColor: 'rgba(255,255,255,0.2)', width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center' },
   actionRow: { marginBottom: 32 },
-  payBackBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 16, borderWidth: 1.5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
+  payBackBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 16, borderWidth: 1.5, shadowColor: theme.colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
   payBackBtnText: { fontSize: sfs(16), fontWeight: 'bold', marginLeft: 8 },
   searchBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 50, borderRadius: 16, borderWidth: 1, marginBottom: 20 },
   searchInput: { flex: 1, marginLeft: 10, fontSize: sfs(16) },
@@ -51,7 +53,7 @@ const getStyles = (theme: any, sfs: any, insets: any) => StyleSheet.create({
   dateHeader: { paddingHorizontal: 24, paddingVertical: 12, marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   dateHeaderText: { fontSize: sfs(16), fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 },
   dateTotalText: { fontSize: sfs(16), fontWeight: '500' },
-  historyRow: { flexDirection: 'row', alignItems: 'center', padding: 16, marginHorizontal: 20, marginBottom: 12, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
+  historyRow: { flexDirection: 'row', alignItems: 'center', padding: 16, marginHorizontal: 20, marginBottom: 12, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)', shadowColor: theme.colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
   historyIcon: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
   historyMain: { flex: 1 },
   historyProductName: { fontSize: sfs(16), fontWeight: '600', marginBottom: 2 },
@@ -65,8 +67,8 @@ const getStyles = (theme: any, sfs: any, insets: any) => StyleSheet.create({
   settledBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginTop: 4 },
   settledBadgeText: { fontSize: sfs(10), fontWeight: 'bold' },
   emptyContainer: { padding: 60, alignItems: 'center' },
-  fab: { position: 'absolute', right: 24, bottom: 40, width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
-  fabBadge: { position: 'absolute', top: 16, right: 16, backgroundColor: 'white', width: 16, height: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
+  fab: { position: 'absolute', right: 24, bottom: 40, width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', shadowColor: theme.colors.black, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  fabBadge: { position: 'absolute', top: 16, right: 16, backgroundColor: theme.colors.white, width: 16, height: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40 },
   modalIndicator: { width: 40, height: 4, backgroundColor: 'rgba(0,0,0,0.1)', alignSelf: 'center', borderRadius: 2, marginBottom: 16 },
@@ -416,7 +418,7 @@ export default function ShopDetail() {
         estimatedItemSize={100}
         ListHeaderComponent={
           <View style={styles.headerSection}>
-            <View style={[styles.balanceCard, { backgroundColor: theme.colors.primary }]}><View><Text style={styles.balanceLabel}>{t('shop.totalDue')}</Text><Text style={styles.balanceAmount}>৳{shop?.total_baki?.toLocaleString() || '0'}</Text></View><View style={styles.balanceIcon}><Ionicons name="card-outline" size={sfs(24)} color="white" /></View></View>
+            <View style={[styles.balanceCard, { backgroundColor: theme.colors.primary }]}><View><Text style={styles.balanceLabel}>{t('shop.totalDue')}</Text><Text style={styles.balanceAmount}>৳{shop?.total_baki?.toLocaleString() || '0'}</Text></View><View style={styles.balanceIcon}><Ionicons name="card-outline" size={sfs(24)} color={theme.colors.white} /></View></View>
             <View style={styles.actionRow}>
               <TouchableOpacity
                 style={[styles.payBackBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary, flex: 1 }]}
@@ -481,7 +483,7 @@ export default function ShopDetail() {
         accessibilityLabel={t('shop.manageProducts')}
         accessibilityRole="button"
       >
-        <Ionicons name="cube" size={sfs(24)} color="white" />
+        <Ionicons name="cube" size={sfs(24)} color={theme.colors.white} />
         <View style={styles.fabBadge}><Ionicons name="settings" size={sfs(24)} color={theme.colors.primary} /></View>
       </TouchableOpacity>
 
@@ -526,6 +528,17 @@ export default function ShopDetail() {
                       <Ionicons name="add" size={sfs(24)} color={theme.colors.textPrimary} />
                     </TouchableOpacity>
                   </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>{t('payment.noteOptional')}</Text>
+                  <TextInput 
+                    style={[styles.modalInput, { backgroundColor: theme.colors.background, color: theme.colors.textPrimary, borderColor: theme.colors.border }, Platform.OS === 'web' && ({ outlineStyle: 'none' } as any)]} 
+                    value={note} 
+                    onChangeText={setNote} 
+                    placeholder={t('payment.notePlaceholder')} 
+                    placeholderTextColor={theme.colors.textMuted} 
+                  />
                 </View>
               </View>
               <Button title={t('shop.saveEntry')} onPress={handleSaveTransaction} />
@@ -572,6 +585,17 @@ export default function ShopDetail() {
                       </TouchableOpacity>
                     ))}
                   </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>{t('payment.noteOptional')}</Text>
+                  <TextInput 
+                    style={[styles.modalInput, { backgroundColor: theme.colors.background, color: theme.colors.textPrimary, borderColor: theme.colors.border }, Platform.OS === 'web' && ({ outlineStyle: 'none' } as any)]} 
+                    value={note} 
+                    onChangeText={setNote} 
+                    placeholder={t('payment.notePlaceholder')} 
+                    placeholderTextColor={theme.colors.textMuted} 
+                  />
                 </View>
               </View>
               <Button title={t('common.save')} onPress={handleSavePayment} />

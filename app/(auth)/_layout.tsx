@@ -17,23 +17,28 @@ class AuthErrorBoundary extends React.Component<
   }
   render() {
     if (this.state.hasError) {
-      return (
-        <ScrollView style={{ flex: 1, backgroundColor: '#0F0F14', padding: 20 }}>
-          <Text style={{ color: 'red', fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
-            🔴 AUTH CRASH ERROR:
-          </Text>
-          <Text style={{ color: '#fff', fontSize: 14, marginBottom: 10 }}>
-            {this.state.error}
-          </Text>
-          <Text style={{ color: '#aaa', fontSize: 11 }}>
-            {this.state.stack}
-          </Text>
-        </ScrollView>
-      );
+      return <AuthErrorView error={this.state.error} stack={this.state.stack} />;
     }
     return this.props.children;
   }
 }
+
+const AuthErrorView = ({ error, stack }: { error: string, stack: string }) => {
+  const { theme } = useTheme();
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background, padding: 20 }}>
+      <Text style={{ color: theme.colors.danger, fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+        🔴 AUTH CRASH ERROR:
+      </Text>
+      <Text style={{ color: theme.colors.textPrimary, fontSize: 14, marginBottom: 10 }}>
+        {error}
+      </Text>
+      <Text style={{ color: theme.colors.textSecondary, fontSize: 11 }}>
+        {stack}
+      </Text>
+    </ScrollView>
+  );
+};
 
 export default function AuthLayout() {
   const { theme } = useTheme();

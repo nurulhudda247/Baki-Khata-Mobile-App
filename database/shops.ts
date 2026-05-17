@@ -4,18 +4,19 @@ export interface Shop {
   id: string;
   user_id: string;
   name: string;
-  address?: string;
   phone?: string;
+  address?: string;
   image_uri?: string;
   created_at: string;
   total_baki?: number;
+  type: 'personal' | 'business';
 }
 
-export const getShops = async (): Promise<Shop[]> => {
+export const getShops = async (type?: 'personal' | 'business'): Promise<Shop[]> => {
   const userId = getCurrentUserId();
   if (!userId) return [];
 
-  const query = `
+  let query = `
     SELECT s.*, 
     (
       (SELECT IFNULL(SUM(t.total_amount), 0) FROM transactions t 
@@ -27,9 +28,17 @@ export const getShops = async (): Promise<Shop[]> => {
     ) as total_baki
     FROM shops s
     WHERE s.user_id = ? AND s.is_deleted = 0
-    ORDER BY s.name ASC
   `;
-  return await queryAll<Shop>(query, [userId]);
+  
+  const params: any[] = [userId];
+  if (type) {
+    query += ` AND s.type = ?`;
+    params.push(type);
+  }
+  
+  query += ` ORDER BY s.name ASC`;
+  
+  return await queryAll<Shop>(query, params);
 };
 
 export const getShopById = async (id: string): Promise<Shop | null> => {
@@ -50,18 +59,18 @@ export const getShopById = async (id: string): Promise<Shop | null> => {
   return { ...shop, total_baki: result?.total || 0 };
 };
 
-export const createShop = async (name: string, address: string = '', phone: string = '', image_uri: string = '') => {
+export const createShop = async (name: string, phone: string = '', address: string = '', image_uri: string = '', type: 'personal' | 'business' = 'personal') => {
   const userId = getCurrentUserId();
   if (!userId) throw new Error('No user logged in');
 
   const id = generateUUID();
   return await execute(
-    'INSERT INTO shops (id, user_id, name, address, phone, image_uri, is_dirty) VALUES (?, ?, ?, ?, ?, ?, 1)',
-    [id, userId, name, address, phone, image_uri]
+    'INSERT INTO shops (id, user_id, name, phone, address, image_uri, type, is_dirty) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
+    [id, userId, name, phone, address, image_uri, type]
   );
 };
 
-export const updateShop = async (id: string, name: string, address: string, phone: string, image_uri: string = '') => {
+export const updateShop = async (id: string, name: string, address: string = '', phone: string = '', image_uri: string = '') => {
   const userId = getCurrentUserId();
   if (!userId) throw new Error('No user logged in');
 
@@ -82,4 +91,14 @@ export const deleteShop = async (id: string) => {
   await execute('UPDATE customers SET is_deleted = 1, is_dirty = 1, updated_at = CURRENT_TIMESTAMP WHERE shop_id = ? AND user_id = ?', [id, userId]);
 
   return await execute('UPDATE shops SET is_deleted = 1, is_dirty = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?', [id, userId]);
+};
+
+export const getPrimaryShop = async (type: 'business' | 'personal'): Promise<Shop | null> => {
+  const userId = getCurrentUserId();
+  if (!userId) return null;
+  return await queryFirst<Shop>('SELECT * FROM shops WHERE user_id = ? AND type = ? AND is_deleted = 0 ORDER BY created_at ASC LIMIT 1', [userId, type]);
+};
+
+export const updateShopProfile = async (shopId: string, newName: string, newImageUri: string) => {
+  await execute('UPDATE shops SET name = ?, image_uri = ?, is_dirty = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newName, newImageUri, shopId]);
 };

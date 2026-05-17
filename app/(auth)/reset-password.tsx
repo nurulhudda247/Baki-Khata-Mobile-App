@@ -21,9 +21,9 @@ import { FloatingLabelInput } from '../../components/ui/FloatingLabelInput';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
-const { height } = Dimensions.get('window');
+import { Theme } from '../../constants/darkTheme';
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme, sfs: (s: number) => number) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     paddingTop: 40,
   },
   headerTitle: {
-    color: '#FFF',
+    color: theme.colors.white,
     fontFamily: 'Inter_700Bold',
     letterSpacing: -0.5,
   },
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   buttonText: {
-    color: '#FFF',
+    color: theme.colors.white,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.5,
   },
@@ -85,6 +85,7 @@ const styles = StyleSheet.create({
 
 export default function ResetPasswordScreen() {
   const { theme, sfs, mode } = useTheme();
+  const styles = getStyles(theme, sfs);
   const { t } = useTranslation();
   const { showToast } = useToast();
   const router = useRouter();
@@ -190,7 +191,7 @@ export default function ResetPasswordScreen() {
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color="#FFF" />
+                  <ActivityIndicator color={theme.colors.white} />
                 ) : (
                   <Text style={[styles.buttonText, { fontSize: sfs(16) }]}>{t('auth.updatePassword')}</Text>
                 )}

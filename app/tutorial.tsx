@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, SafeAreaView, Platform, StatusBar } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +14,9 @@ export default function TutorialScreen() {
   const { theme, sfs, mode } = useTheme();
   const styles = getStyles(theme, sfs);
   const { completeTutorial, userProfile } = useAppContext();
+  const { user, activeProfile } = useAuth();
   const { t } = useTranslation();
+  const isShopkeeper = (activeProfile || userProfile?.role) === 'shopkeeper';
   
   const [currentStep, setCurrentStep] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
@@ -34,23 +37,29 @@ export default function TutorialScreen() {
   const presetsRef = useRef<View>(null);
   const qtyControlRef = useRef<View>(null);
 
-  const onMeasure = useCallback((key: string, ref: React.RefObject<View>) => {
+  const onMeasure = useCallback((key: string, ref: React.RefObject<View>, retryCount = 0) => {
     if (ref.current && rootRef.current) {
       ref.current.measureLayout(
         rootRef.current as any,
         (x, y, width, height) => {
           if (width > 0 && height > 0) {
             setTargets(prev => ({ ...prev, [key]: { x, y, width, height } }));
+          } else if (retryCount < 5) {
+            setTimeout(() => onMeasure(key, ref, retryCount + 1), 100);
           }
         },
         () => {
           ref.current?.measureInWindow((x, y, width, height) => {
-            if (width > 0) {
+            if (width > 0 && height > 0) {
               setTargets(prev => ({ ...prev, [key]: { x, y, width, height } }));
+            } else if (retryCount < 5) {
+              setTimeout(() => onMeasure(key, ref, retryCount + 1), 100);
             }
           });
         }
       );
+    } else if (retryCount < 5) {
+      setTimeout(() => onMeasure(key, ref, retryCount + 1), 100);
     }
   }, []);
 
@@ -61,12 +70,12 @@ export default function TutorialScreen() {
     }, 600);
   };
 
-  const steps = [
+  const steps = React.useMemo(() => [
     {
       id: 'home_add',
       targetRect: targets['fab'] || null,
-      title: t('tutorial.steps.addShop.title'),
-      description: t('tutorial.steps.addShop.desc'),
+      title: isShopkeeper ? t('tutorial.steps.shopkeeper.addCustomer.title') : t('tutorial.steps.addShop.title'),
+      description: isShopkeeper ? t('tutorial.steps.shopkeeper.addCustomer.desc') : t('tutorial.steps.addShop.desc'),
       arrowDirection: 'down' as const,
     },
     {
@@ -79,15 +88,15 @@ export default function TutorialScreen() {
     {
       id: 'home_card',
       targetRect: targets['shopCard'] || null,
-      title: t('tutorial.steps.shopDetails.title'),
-      description: t('tutorial.steps.shopDetails.desc'),
+      title: isShopkeeper ? t('tutorial.steps.shopkeeper.customerDetails.title') : t('tutorial.steps.shopDetails.title'),
+      description: isShopkeeper ? t('tutorial.steps.shopkeeper.customerDetails.desc') : t('tutorial.steps.shopDetails.desc'),
       arrowDirection: 'up' as const,
     },
     {
       id: 'shop_record',
       targetRect: targets['recordBtn'] || null,
-      title: t('tutorial.steps.quickEntry.title'),
-      description: t('tutorial.steps.quickEntry.desc'),
+      title: isShopkeeper ? t('tutorial.steps.shopkeeper.addPayment.title') : t('tutorial.steps.quickEntry.title'),
+      description: isShopkeeper ? t('tutorial.steps.shopkeeper.addPayment.desc') : t('tutorial.steps.quickEntry.desc'),
       arrowDirection: 'up' as const,
     },
     {
@@ -100,8 +109,8 @@ export default function TutorialScreen() {
     {
       id: 'product_tap',
       targetRect: targets['productCard'] || null,
-      title: t('tutorial.steps.recordPurchase.title'),
-      description: t('tutorial.steps.recordPurchase.desc'),
+      title: isShopkeeper ? t('tutorial.steps.shopkeeper.recordSale.title') : t('tutorial.steps.recordPurchase.title'),
+      description: isShopkeeper ? t('tutorial.steps.shopkeeper.recordSale.desc') : t('tutorial.steps.recordPurchase.desc'),
       arrowDirection: 'up' as const,
     },
     {
@@ -114,8 +123,8 @@ export default function TutorialScreen() {
     {
       id: 'purchase_save',
       targetRect: targets['savePurchase'] || null,
-      title: t('tutorial.steps.recordPurchase.title'),
-      description: t('tutorial.steps.recordPurchase.desc'),
+      title: isShopkeeper ? t('tutorial.steps.shopkeeper.recordSale.title') : t('tutorial.steps.recordPurchase.title'),
+      description: isShopkeeper ? t('tutorial.steps.shopkeeper.recordSale.desc') : t('tutorial.steps.recordPurchase.desc'),
       arrowDirection: 'down' as const,
     },
     {
@@ -146,15 +155,16 @@ export default function TutorialScreen() {
       description: t('tutorial.steps.restartLocation.desc'),
       arrowDirection: 'up' as const,
     }
-  ];
+  ], [targets, isShopkeeper, t]);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       const nextStep = currentStep + 1;
       setCurrentStep(nextStep);
       
+      const nextId = steps[nextStep].id;
+      // Trigger measurement after a short delay to allow UI to update
       setTimeout(() => {
-        const nextId = steps[nextStep].id;
         if (nextId === 'home_swipe') onMeasure('swipeHint', swipeHintRef);
         if (nextId === 'home_card') onMeasure('shopCard', shopCardRef);
         if (nextId === 'shop_record') onMeasure('recordBtn', recordBtnRef);
@@ -166,7 +176,7 @@ export default function TutorialScreen() {
         if (nextId === 'product_add') onMeasure('addProduct', addProductRef);
         if (nextId === 'product_delete') onMeasure('productItem', productItemRef);
         if (nextId === 'tutorial_restart') onMeasure('settings', settingsRef);
-      }, 400);
+      }, 500);
     } else {
       setIsFinished(true);
     }
@@ -183,11 +193,12 @@ export default function TutorialScreen() {
   };
 
   const handleFinish = async () => {
-    router.replace('/');
     try {
       await completeTutorial();
+      router.replace('/');
     } catch (e) {
       console.error('Failed to complete tutorial', e);
+      router.replace('/');
     }
   };
 
@@ -199,8 +210,12 @@ export default function TutorialScreen() {
       <View style={styles.mockScreen}>
         <View style={styles.header}>
           <View>
-            <Text style={[styles.greeting, { color: theme.colors.textSecondary, fontSize: sfs(16) }]}>{t('home.hello')},</Text>
-            <Text style={[styles.userName, { color: theme.colors.textPrimary, fontSize: sfs(24) }]}>{userProfile?.name || 'User'}</Text>
+            <Text style={[styles.greeting, { color: theme.colors.textSecondary, fontSize: sfs(16) }]}>
+              {isShopkeeper ? t('shopkeeper.dashboard') : t('home.hello')},
+            </Text>
+            <Text style={[styles.userName, { color: theme.colors.textPrimary, fontSize: sfs(24) }]}>
+              {userProfile?.name || user?.displayName || (isShopkeeper ? t('auth.roleShopkeeper') : t('auth.rolePersonal'))}
+            </Text>
           </View>
           <View 
             ref={settingsRef}
@@ -214,9 +229,13 @@ export default function TutorialScreen() {
         <View style={styles.contentPadding}>
           <View style={[styles.searchBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <Ionicons name="search" size={sfs(24)} color={theme.colors.textMuted} />
-            <Text style={{ color: theme.colors.textMuted, marginLeft: 12, fontSize: sfs(16) }}>{t('common.searchShop')}</Text>
+            <Text style={{ color: theme.colors.textMuted, marginLeft: 12, fontSize: sfs(16) }}>
+              {isShopkeeper ? t('common.searchCustomer') : t('common.searchShop')}
+            </Text>
           </View>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary, fontSize: sfs(20) }]}>{t('home.myLedger')}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary, fontSize: sfs(20) }]}>
+            {isShopkeeper ? t('shopkeeper.activeCustomers') : t('home.myLedger')}
+          </Text>
           
           <View style={{ position: 'relative' }}>
             {isSwipeStep && (
@@ -227,11 +246,11 @@ export default function TutorialScreen() {
                 style={[styles.swipeActionsMock, { backgroundColor: theme.colors.success }]}
               >
                 <View style={styles.swipeActionMockBtn}>
-                  <Ionicons name="call" size={sfs(20)} color="white" />
+                  <Ionicons name="call" size={sfs(20)} color={theme.colors.white} />
                   <Text style={styles.swipeActionMockText}>{t('common.call')}</Text>
                 </View>
                 <View style={[styles.swipeActionMockBtn, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' }]}>
-                  <Ionicons name="logo-whatsapp" size={sfs(20)} color="white" />
+                  <Ionicons name="logo-whatsapp" size={sfs(20)} color={theme.colors.white} />
                   <Text style={styles.swipeActionMockText}>WhatsApp</Text>
                 </View>
               </View>
@@ -247,21 +266,27 @@ export default function TutorialScreen() {
               ]}
             >
               <View style={[styles.shopIcon, { backgroundColor: theme.colors.primary + '20' }]}>
-                <Ionicons name="storefront" size={sfs(24)} color={theme.colors.primary} />
+                <Ionicons name={isShopkeeper ? "person" : "storefront"} size={sfs(24)} color={theme.colors.primary} />
               </View>
               <View style={{ flex: 1, marginLeft: 16 }}>
-                <Text style={[styles.shopName, { color: theme.colors.textPrimary, fontSize: sfs(18) }]}>Bhai Bhai Store</Text>
-                <Text style={[styles.shopAddress, { color: theme.colors.textSecondary, fontSize: sfs(14) }]}>Dhaka, Bangladesh</Text>
+                <Text style={[styles.shopName, { color: theme.colors.textPrimary, fontSize: sfs(18) }]}>
+                  {isShopkeeper ? t('tutorial.mock.customerName') : t('tutorial.mock.shopName')}
+                </Text>
+                <Text style={[styles.shopAddress, { color: theme.colors.textSecondary, fontSize: sfs(14) }]}>
+                  {isShopkeeper ? '01700-000000' : t('tutorial.mock.address')}
+                </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[styles.shopBakiLabel, { color: theme.colors.textSecondary, fontSize: sfs(12) }]}>{t('home.totalDue')}</Text>
+                <Text style={[styles.shopBakiLabel, { color: theme.colors.textSecondary, fontSize: sfs(12) }]}>
+                  {isShopkeeper ? t('customer.netDue') : t('home.totalDue')}
+                </Text>
                 <Text style={[styles.shopBakiValue, { color: theme.colors.danger, fontSize: sfs(18) }]}>৳ 1,250</Text>
               </View>
             </View>
           </View>
         </View>
         <View ref={fabRef} collapsable={false} onLayout={() => onMeasure('fab', fabRef)} style={[styles.fab, { backgroundColor: theme.colors.primary }]}>
-          <Ionicons name="add" size={sfs(24)} color="white" />
+          <Ionicons name="add" size={sfs(24)} color={theme.colors.white} />
         </View>
       </View>
     );
@@ -274,7 +299,9 @@ export default function TutorialScreen() {
         <View style={[styles.detailsHeader, { backgroundColor: theme.colors.background }]}>
           <View style={styles.appBarLeft}>
             <View style={[styles.iconBtn, { backgroundColor: theme.colors.surface }]}><Ionicons name="arrow-back" size={sfs(24)} color={theme.colors.textPrimary} /></View>
-            <Text style={[styles.headerShopName, { color: theme.colors.textPrimary, fontSize: sfs(18) }]} numberOfLines={1}>Bhai Bhai Store</Text>
+            <Text style={[styles.headerShopName, { color: theme.colors.textPrimary, fontSize: sfs(18) }]} numberOfLines={1}>
+              {isShopkeeper ? t('tutorial.mock.customerName') : t('tutorial.mock.shopName')}
+            </Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={[styles.iconBtn, { backgroundColor: theme.colors.success + '15' }]}><Ionicons name="call" size={sfs(24)} color={theme.colors.success} /></View>
@@ -285,11 +312,11 @@ export default function TutorialScreen() {
         <View style={styles.contentPadding}>
           <View style={[styles.balanceCard, { backgroundColor: theme.colors.primary }]}>
             <View>
-              <Text style={styles.balanceLabel}>{t('shop.totalDue')}</Text>
+              <Text style={styles.balanceLabel}>{isShopkeeper ? t('customer.netDue') : t('shop.totalDue')}</Text>
               <Text style={styles.balanceAmount}>৳1,250.00</Text>
             </View>
             <View style={styles.balanceIcon}>
-              <Ionicons name="card-outline" size={sfs(24)} color="white" />
+              <Ionicons name={isShopkeeper ? "person-outline" : "card-outline"} size={sfs(24)} color={theme.colors.white} />
             </View>
           </View>
           
@@ -300,7 +327,9 @@ export default function TutorialScreen() {
               style={[styles.payBackBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
             >
               <Ionicons name="cash-outline" size={sfs(24)} color={theme.colors.primary} />
-              <Text style={[styles.payBackBtnText, { color: theme.colors.primary }]}>{t('shop.payBack')}</Text>
+              <Text style={[styles.payBackBtnText, { color: theme.colors.primary }]}>
+                {isShopkeeper ? t('customer.recordPayment') : t('shop.payBack')}
+              </Text>
             </View>
           </View>
 
@@ -344,19 +373,19 @@ export default function TutorialScreen() {
               style={[styles.productCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
             >
               <View style={[styles.productIcon, { backgroundColor: theme.colors.primary + '15' }]}><Ionicons name="fast-food" size={sfs(24)} color={theme.colors.primary} /></View>
-              <Text style={[styles.productName, { color: theme.colors.textPrimary }]} numberOfLines={1}>Potato</Text>
+              <Text style={[styles.productName, { color: theme.colors.textPrimary }]} numberOfLines={1}>{t('tutorial.mock.product1')}</Text>
               <Text style={[styles.productPrice, { color: theme.colors.textSecondary }]}>৳50</Text>
             </View>
             <View style={[styles.productCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
               <View style={[styles.productIcon, { backgroundColor: theme.colors.primary + '15' }]}><Ionicons name="water" size={sfs(24)} color={theme.colors.primary} /></View>
-              <Text style={[styles.productName, { color: theme.colors.textPrimary }]} numberOfLines={1}>Onion</Text>
+              <Text style={[styles.productName, { color: theme.colors.textPrimary }]} numberOfLines={1}>{t('tutorial.mock.product2')}</Text>
               <Text style={[styles.productPrice, { color: theme.colors.textSecondary }]}>৳80</Text>
             </View>
           </ScrollView>
 
           <View style={styles.tabContainer}>
-            <View style={[styles.tab, { borderBottomColor: theme.colors.primary, borderBottomWidth: 3 }]}><Text style={[styles.tabText, { color: theme.colors.primary, fontSize: sfs(16) }]}>{t('shop.purchaseHistory')}</Text></View>
-            <View style={styles.tab}><Text style={[styles.tabText, { color: theme.colors.textMuted, fontSize: sfs(16) }]}>{t('shop.paymentHistory')}</Text></View>
+            <View style={[styles.tab, { borderBottomColor: theme.colors.primary, borderBottomWidth: 3 }]}><Text style={[styles.tabText, { color: theme.colors.primary, fontSize: sfs(16) }]}>{isShopkeeper ? t('shopkeeper.bakiHistory') : t('shop.purchaseHistory')}</Text></View>
+            <View style={styles.tab}><Text style={[styles.tabText, { color: theme.colors.textMuted, fontSize: sfs(16) }]}>{isShopkeeper ? t('shopkeeper.paymentHistory') : t('shop.paymentHistory')}</Text></View>
           </View>
         </View>
 
@@ -366,7 +395,7 @@ export default function TutorialScreen() {
           onLayout={() => onMeasure('manageProducts', manageProductsRef)}
           style={[styles.fab, { backgroundColor: theme.colors.primary, bottom: 40 }]}
         >
-          <Ionicons name="cube" size={sfs(24)} color="white" />
+          <Ionicons name="cube" size={sfs(24)} color={theme.colors.white} />
           <View style={styles.fabBadge}><Ionicons name="settings" size={sfs(14)} color={theme.colors.primary} /></View>
         </View>
       </View>
@@ -380,15 +409,15 @@ export default function TutorialScreen() {
         <View style={[styles.modalContentMock, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.modalIndicatorMock} />
           <View style={styles.modalHeaderMock}>
-            <Text style={[styles.modalTitleMock, { color: theme.colors.textPrimary }]}>{t('shop.recordEntry')}</Text>
+            <Text style={[styles.modalTitleMock, { color: theme.colors.textPrimary }]}>{isShopkeeper ? t('shopkeeper.newBaki') : t('shop.recordEntry')}</Text>
             <View style={styles.modalCloseMock}><Ionicons name="close" size={sfs(24)} color={theme.colors.textMuted} /></View>
           </View>
           <View style={[styles.selectedProductInfo, { backgroundColor: theme.colors.primary + '10' }]}>
-            <Text style={[styles.modalProductName, { color: theme.colors.textPrimary }]}>Potato</Text>
+            <Text style={[styles.modalProductName, { color: theme.colors.textPrimary }]}>{t('tutorial.mock.product1')}</Text>
             <Text style={{ color: theme.colors.primary, fontWeight: 'bold', fontSize: sfs(16) }}>৳50 / kg</Text>
           </View>
           <View style={styles.modalBodyMock}>
-            <Text style={[styles.inputLabelMock, { color: theme.colors.textSecondary }]}>{t('shop.buyAmount')}</Text>
+            <Text style={[styles.inputLabelMock, { color: theme.colors.textSecondary }]}>{isShopkeeper ? t('transaction.quantity') : t('shop.buyAmount')}</Text>
             <View 
               ref={qtyControlRef}
               onLayout={() => onMeasure('qtyControl', qtyControlRef)}
@@ -404,7 +433,7 @@ export default function TutorialScreen() {
             onLayout={() => onMeasure('savePurchase', savePurchaseRef)}
             style={[styles.saveBtn, { backgroundColor: theme.colors.primary, marginTop: 16 }]}
           >
-            <Text style={styles.saveBtnText}>{t('shop.saveEntry')}</Text>
+            <Text style={styles.saveBtnText}>{isShopkeeper ? t('transaction.saveTransaction') : t('shop.saveEntry')}</Text>
           </View>
         </View>
       </View>
@@ -428,7 +457,7 @@ export default function TutorialScreen() {
         >
           <View style={[styles.productIcon, { backgroundColor: theme.colors.primary + '15' }]}><Ionicons name="fast-food" size={sfs(24)} color={theme.colors.primary} /></View>
           <View style={{ flex: 1, marginLeft: 16 }}>
-            <Text style={[styles.productName, { color: theme.colors.textPrimary, fontSize: sfs(16) }]}>Potato</Text>
+            <Text style={[styles.productName, { color: theme.colors.textPrimary, fontSize: sfs(16) }]}>{t('tutorial.mock.product1')}</Text>
             <Text style={{ color: theme.colors.textSecondary, fontSize: sfs(14), marginTop: 2, fontWeight: 'bold' }}>৳50 <Text style={{ fontWeight: 'normal' }}>/ kg</Text></Text>
           </View>
           <Ionicons name="chevron-forward" size={sfs(20)} color={theme.colors.textMuted} />
@@ -437,7 +466,7 @@ export default function TutorialScreen() {
         <View style={[styles.productCardListItemMock, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, opacity: 0.6 }]}>
           <View style={[styles.productIcon, { backgroundColor: theme.colors.primary + '15' }]}><Ionicons name="water" size={sfs(24)} color={theme.colors.primary} /></View>
           <View style={{ flex: 1, marginLeft: 16 }}>
-            <Text style={[styles.productName, { color: theme.colors.textPrimary, fontSize: sfs(16) }]}>Onion</Text>
+            <Text style={[styles.productName, { color: theme.colors.textPrimary, fontSize: sfs(16) }]}>{t('tutorial.mock.product2')}</Text>
             <Text style={{ color: theme.colors.textSecondary, fontSize: sfs(14), marginTop: 2, fontWeight: 'bold' }}>৳80 <Text style={{ fontWeight: 'normal' }}>/ kg</Text></Text>
           </View>
           <Ionicons name="chevron-forward" size={sfs(20)} color={theme.colors.textMuted} />
@@ -450,7 +479,7 @@ export default function TutorialScreen() {
         onLayout={() => onMeasure('addProduct', addProductRef)}
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
       >
-        <Ionicons name="add" size={sfs(24)} color="white" />
+        <Ionicons name="add" size={sfs(24)} color={theme.colors.white} />
       </View>
     </View>
   );
@@ -494,7 +523,7 @@ export default function TutorialScreen() {
               hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             >
               <Text style={[styles.getStartedBtnText, { fontSize: sfs(18) }]}>{t('tutorial.getStarted')}</Text>
-              <Ionicons name="rocket-outline" size={sfs(20)} color="white" />
+              <Ionicons name="rocket-outline" size={sfs(20)} color={theme.colors.white} />
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -513,7 +542,9 @@ export default function TutorialScreen() {
   );
 }
 
-const getStyles = (theme: any, sfs: any) => StyleSheet.create({
+import { Theme } from '../constants/darkTheme';
+
+const getStyles = (theme: Theme, sfs: (s: number) => number) => StyleSheet.create({
   container: { flex: 1, width: '100%', height: '100%' },
   mockScreen: { flex: 1, width: '100%', height: '100%' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 60, paddingBottom: 20 },
@@ -529,7 +560,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
   shopAddress: { fontSize: sfs(14) },
   shopBakiLabel: { fontSize: sfs(12), textTransform: 'uppercase', fontWeight: 'bold' },
   shopBakiValue: { fontSize: sfs(18), fontWeight: 'bold' },
-  fab: { position: 'absolute', right: 24, bottom: 24, width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+  fab: { position: 'absolute', right: 24, bottom: 24, width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: theme.colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
   detailsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 60, paddingBottom: 12 },
   detailsTitle: { fontSize: sfs(18), fontWeight: 'bold' },
   appBarLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
@@ -537,7 +568,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
   iconBtn: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   balanceCard: { padding: 24, borderRadius: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   balanceLabel: { color: 'rgba(255,255,255,0.8)', fontSize: sfs(12), marginBottom: 4 },
-  balanceAmount: { color: 'white', fontSize: sfs(16), fontWeight: 'bold' },
+  balanceAmount: { color: theme.colors.white, fontSize: sfs(16), fontWeight: 'bold' },
   balanceIcon: { backgroundColor: 'rgba(255,255,255,0.2)', width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center' },
   actionRow: { marginBottom: 24 },
   payBackBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 16, borderWidth: 1.5 },
@@ -549,7 +580,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
   tabContainer: { flexDirection: 'row', marginTop: 32, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   tabText: { fontSize: sfs(16), fontWeight: 'bold' },
-  fabBadge: { position: 'absolute', top: 16, right: 16, backgroundColor: 'white', width: 16, height: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
+  fabBadge: { position: 'absolute', top: 16, right: 16, backgroundColor: theme.colors.white, width: 16, height: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
   finishOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 24, zIndex: 10000 },
   finishCard: { width: '100%', padding: 32, borderRadius: 32, borderWidth: 1, alignItems: 'center' },
   successIcon: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
@@ -557,7 +588,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
   finishDesc: { fontSize: sfs(16), textAlign: 'center', marginBottom: 12, lineHeight: sfs(24) },
   settingsNote: { fontSize: sfs(14), textAlign: 'center', marginBottom: 32, fontStyle: 'italic' },
   getStartedBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, paddingHorizontal: 32, borderRadius: 20, width: '100%', gap: 10, marginBottom: 16 },
-  getStartedBtnText: { fontSize: sfs(18), color: 'white', fontWeight: 'bold' },
+  getStartedBtnText: { fontSize: sfs(18), color: theme.colors.white, fontWeight: 'bold' },
   restartBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 14, borderWidth: 1, width: '100%', gap: 8 },
   restartBtnText: { fontSize: sfs(14), fontWeight: '600' },
   selectedProductInfo: { marginBottom: 24, padding: 16, borderRadius: 20 },
@@ -567,7 +598,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
   inputLabel: { fontSize: sfs(12), marginBottom: 8, fontWeight: '600' },
   modalInput: { height: 60, borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, justifyContent: 'center' },
   saveBtn: { height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  saveBtnText: { color: 'white', fontSize: sfs(18), fontWeight: 'bold' },
+  saveBtnText: { color: theme.colors.white, fontSize: sfs(18), fontWeight: 'bold' },
   headerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   backBtn: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
   headerTitle: { fontSize: sfs(20), fontWeight: 'bold', flex: 1 },
@@ -591,7 +622,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
     borderRadius: 16,
   },
   swipeActionMockText: {
-    color: 'white',
+    color: theme.colors.white,
     fontSize: sfs(10),
     fontWeight: 'bold',
     marginTop: 2,
@@ -601,7 +632,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    shadowColor: '#000',
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -614,7 +645,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
   modalIndicatorMock: { width: 40, height: 4, backgroundColor: 'rgba(0,0,0,0.1)', alignSelf: 'center', borderRadius: 2, marginBottom: 16 },
   modalHeaderMock: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitleMock: { fontSize: sfs(20), fontWeight: 'bold' },
-  modalCloseMock: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.05)', justifyContent: 'center', alignItems: 'center' },
+  modalCloseMock: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center' },
   modalBodyMock: { marginBottom: 16 },
   inputLabelMock: { fontSize: sfs(12), marginBottom: 8, fontWeight: '600' },
   modalInputMock: { height: 60, borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, justifyContent: 'center', marginBottom: 16 },

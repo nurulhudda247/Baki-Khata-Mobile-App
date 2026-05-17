@@ -21,6 +21,8 @@ interface FloatingLabelInputProps extends TextInputProps {
   label: string;
   error?: string;
   rightElement?: React.ReactNode;
+  containerStyle?: any;
+  inputStyle?: any;
 }
 
 export const FloatingLabelInput: React.FC<FloatingLabelInputProps> = React.memo(({
@@ -28,6 +30,8 @@ export const FloatingLabelInput: React.FC<FloatingLabelInputProps> = React.memo(
   value,
   error,
   rightElement,
+  containerStyle,
+  inputStyle,
   onFocus,
   onBlur,
   ...props
@@ -82,7 +86,7 @@ export const FloatingLabelInput: React.FC<FloatingLabelInputProps> = React.memo(
   const bgColor = theme.colors.background;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       <Pressable 
         onPress={() => inputRef.current?.focus()}
         style={[
@@ -94,7 +98,11 @@ export const FloatingLabelInput: React.FC<FloatingLabelInputProps> = React.memo(
                 ? theme.colors.primary 
                 : theme.colors.border,
             borderWidth: isFocused ? 2 : 1,
-          }
+          },
+          (() => {
+            const flattened = StyleSheet.flatten(inputStyle);
+            return flattened && flattened.height ? { height: flattened.height } : null;
+          })()
         ]}
       >
         <Animated.View 
@@ -133,6 +141,7 @@ export const FloatingLabelInput: React.FC<FloatingLabelInputProps> = React.memo(
           style={[
             styles.input,
             { color: theme.colors.textPrimary, fontSize: sfs(16) },
+            inputStyle,
             Platform.OS === 'web' && ({ outlineStyle: 'none' } as any),
           ]}
           placeholder=""

@@ -1,53 +1,64 @@
 {
   "common": {
-    "save": "Save",
+    "all": "All",
+    "back": "Back",
+    "call": "Call",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
-    "add": "Add",
-    "search": "Search...",
+    "error": "Error",
+    "gotIt": "Got it",
+    "hasDue": "Has Due",
     "loading": "Loading...",
     "noData": "No data found",
-    "back": "Back",
-    "next": "Next",
-    "done": "Done",
-    "searchShop": "Search Shop...",
-    "searchProduct": "Search Product...",
-    "success": "Success",
-    "error": "Error",
-    "updated": "Updated Successfully",
-    "gotIt": "Got it",
     "ok": "OK",
-    "call": "Call"
-  },
-  "onboarding": {
-    "welcome": "Welcome to Baki Khata",
-    "welcomeSub": "Your digital accounts for credit and payments",
-    "enterName": "What is your name?",
-    "namePlaceholder": "Enter your name",
-    "selectLanguage": "Select Language",
-    "selectTheme": "Select Theme",
-    "getStarted": "Get Started",
-    "dark": "Dark",
-    "light": "Light"
+    "save": "Save",
+    "search": "Search...",
+    "searchCustomer": "Search Customer...",
+    "searchProduct": "Search Product...",
+    "searchShop": "Search Shop...",
+    "success": "Success",
+    "login": "Login",
+    "skip": "Skip",
+    "clearAll": "Clear All",
+    "trashEmpty": "Trash is Empty",
+    "trashEmptyDesc": "Items you delete will appear here until permanently cleared.",
+    "goBack": "Go Back",
+    "shop": "Shop",
+    "customer": "Customer",
+    "product": "Product",
+    "deletePermanent": "Permanent Delete?",
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days",
+    "last90Days": "Last 90 Days",
+    "or": "OR",
+    "discard": "Discard",
+    "merge": "Merge",
+    "welcome": "Welcome!",
+    "welcomeBack": "Welcome Back!",
+    "enterEmailPass": "Please enter both email and password",
+    "fillAllFields": "Please fill in all required fields",
+    "fixErrors": "Please fix the errors before proceeding",
+    "enterShopName": "Please enter your shop name",
+    "registrationSuccess": "Registration successful!",
+    "googleTokenError": "Google registration failed: no token",
+    "enterEmail": "Please enter your email address",
+    "enterValidEmail": "Please enter a valid email address",
+    "resetLinkSent": "Reset link sent! Please check your email.",
+    "whatsappMessage": "Hello {{name}},\nYour current due amount is ৳{{amount}}.\nOldest unpaid bill date: {{date}}.\nPlease clear your dues as soon as possible. Thank you."
   },
   "home": {
     "hello": "Hello",
-    "shops": "Shops",
-    "addShop": "Add Shop",
-    "noShops": "No shops yet. Tap + to add your first shop!",
-    "totalDue": "Total Due",
-    "title": "Baki Khata",
-    "myLedger": "Active Accounts",
-    "emptyLedger": "Your account list is empty. Add a shop to start tracking your baki.",
-    "paidThisMonth": "Paid (This Month)",
-    "deleteShopConfirm": "Are you sure you want to delete \"{{name}}\"? This will remove all history permanently.",
-    "cannotDeleteShop": "Cannot Delete Shop",
-    "cannotDeleteShopMsg": "There is still a balance of ৳{{amount}} in this shop. Please clear all dues or advances before deleting the shop.",
-    "shopDeleted": "Shop deleted successfully.",
-    "deleteShopError": "Failed to delete shop. Please try again."
+    "myLedger": "My Ledger",
+    "emptyLedger": "You haven't added any shops yet. Start by adding your first shop where you have a baki account.",
+    "addShop": "Add Your First Shop",
+    "shopDeleted": "Shop deleted successfully",
+    "cannotDeleteShop": "Cannot delete shop",
+    "cannotDeleteShopMsg": "This shop has a balance of ৳{{amount}}. Please clear all dues before deleting the shop.",
+    "deleteShopConfirm": "Are you sure you want to delete \"{{name}}\"?"
   },
   "shop": {
+    "name": "Shop Name",
     "addShop": "Add New Shop",
     "shopName": "Shop Name",
     "address": "Address",
@@ -78,6 +89,8 @@
     "quantityPlaceholder": "Quantity",
     "amountPlaceholder": "0.00",
     "shopDetails": "Shop Details",
+    "profile": "Shop Profile",
+    "namePlaceholder": "Enter shop name",
     "cameraPermission": "We need camera roll permissions to add a photo.",
     "nameRequired": "Shop name is required",
     "transactionDetails": "Transaction Details",
@@ -112,7 +125,11 @@
     "permissionNeeded": "Permission needed",
     "galleryPermission": "We need permission to access your gallery",
     "nameRequired": "Please enter customer name",
-    "saveError": "Failed to save customer"
+    "saveError": "Failed to save customer",
+    "editCustomer": "Edit Customer",
+    "changePhoto": "Change Photo",
+    "sendNotification": "Send Notification",
+    "notificationSent": "Notification sent to {{name}}"
   },
   "transaction": {
     "newEntry": "New Baki Entry",
@@ -177,18 +194,28 @@
     "fontSizeSmall": "Small",
     "fontSizeNormal": "Normal",
     "fontSizeLarge": "Large",
-    "clearCache": "Clear Cache",
-    "cleanSpace": "Clean up space",
-    "clearCacheTitle": "Clear Cache?",
-    "clearCacheMsg": "This will clear temporary files and image cache. Your account and profile data will be 100% safe.",
-    "clearNow": "Clear Now",
-    "cacheCleared": "Cache cleared successfully",
-    "cacheError": "Failed to clear cache",
+
     "startTutorial": "Start Tutorial",
     "restartTutorialDesc": "Watch again",
     "roleShopkeeper": "Shopkeeper",
     "rolePersonal": "Personal",
-    "dataManagement": "DATA MANAGEMENT"
+    "dataManagement": "DATA MANAGEMENT",
+    "resetData": "Reset Guest Data",
+    "resetDataSub": "Permanently clear all local guest records",
+    "resetSuccess": "Guest data has been reset successfully",
+    "trashBin": "Trash Bin",
+    "trashBinDesc": "View & Restore deleted items",
+    "syncPending": "{{count}} items pending",
+    "lastSynced": "Last synced: {{date}} {{time}}",
+    "trashWarning": "Items in trash can be restored or permanently deleted.",
+    "emptyTrash": "Empty Trash",
+    "emptyTrashMsg": "All items in the trash will be permanently deleted. Are you sure?",
+    "deleteItemMsg": "All data for this item will be permanently deleted. This action cannot be undone.",
+    "invalidFileType": "Invalid file type. Please upload jpg, png, jpeg, webp, or gif.",
+    "fileTooLarge": "File is too large. Max size is 1MB.",
+    "merchant": "Merchant",
+    "user": "User",
+    "userShop": "{{name}}'s Shop"
   },
   "product": {
     "cannotDelete": "This product cannot be deleted because it has transaction history. Please delete the transactions first or just edit the product instead.",
@@ -223,6 +250,11 @@
     "Food": "Food",
     "Cigarette": "Cigarette",
     "Tea": "Tea",
+    "Stationery": "Stationery",
+    "Electronics": "Electronics",
+    "Cosmetics": "Cosmetics",
+    "Clothing": "Clothing",
+    "Recharge": "Mobile/Recharge",
     "Other": "Other"
   },
   "upcoming": {
@@ -233,33 +265,31 @@
     "requestTitle": "Request a Feature",
     "requestSubtitle": "Have an idea to make Baki Khata better? Let us know!",
     "submitRequest": "Submit a Request",
-    "modalTitle": "Request Feature",
-    "featureName": "Feature Name",
-    "featurePlaceholder": "What should we add?",
-    "description": "Description",
-    "descPlaceholder": "Describe how it should work...",
-    "sendRequest": "Send Request",
-    "successTitle": "Thank You!",
     "successMsg": "Your feature request has been sent to our team. We'll review it soon!",
-    "errorFill": "Please fill in both the feature name and description.",
     "errorMail": "Email app is not available on this device. Please email us directly at {{email}}",
     "features": {
-      "dashboard": {
-        "title": "Personal Dashboard",
-        "desc": "A powerful overview of your daily spending, total dues, and the shops where you owe the most."
+      "unifiedSync": {
+        "title": "Unified Ledger & Cloud Sync",
+        "desc": "A major update featuring QR-based ledger sharing between shopkeepers and customers, multi-device cloud backup, and advanced business profile management."
       },
-      "sync": {
-        "title": "Cloud Sync & Multi-Device",
-        "desc": "Access your baki khata from any device with secure cloud backup."
+      "reminders": {
+        "title": "Smart Reminders & Notifications",
+        "desc": "Shopkeepers can send automated or manual payment reminders to customers via Push Notifications and SMS."
       },
-      "advanced": {
-        "title": "Advanced Profile Management",
-        "desc": "Manage multiple spending profiles or categories under a single account."
+      "multiShop": {
+        "title": "Multi-Shop Management",
+        "desc": "Manage multiple businesses and shops within the same profile with independent stats and reports."
       }
     }
   },
   "tutorial": {
-    "welcome": "Guided Tour",
+    "mock": {
+      "customerName": "Abdur Rahim",
+      "shopName": "Bhai Bhai Store",
+      "address": "Dhaka, Bangladesh",
+      "product1": "Potato",
+      "product2": "Onion"
+    },
     "skip": "Skip",
     "next": "Next",
     "finish": "Got it!",
@@ -268,7 +298,6 @@
     "doneTitle": "You're all set!",
     "doneDesc": "You now know the basics of Baki Khata. Ready to manage your accounts?",
     "settingsNote": "Note: You can watch this tutorial again anytime from Settings.",
-    "tapToAdd": "Tap to add {{name}}",
     "steps": {
       "addShop": {
         "title": "Add Your First Shop",
@@ -313,12 +342,32 @@
       "quantityControls": {
         "title": "Easy Quantity",
         "desc": "Use the plus and minus buttons to quickly adjust the quantity of products."
+      },
+      "shopkeeper": {
+        "addCustomer": {
+          "title": "Add Your First Customer",
+          "desc": "Tap the '+' button to add a customer and start tracking their baki."
+        },
+        "customerDetails": {
+          "title": "Customer Overview",
+          "desc": "See how much this customer owes you and track their payment history."
+        },
+        "recordSale": {
+          "title": "Record a Sale",
+          "desc": "Simply tap on any product they bought to record a new baki entry."
+        },
+        "addPayment": {
+          "title": "Record Payment",
+          "desc": "Whenever a customer pays you back, tap 'Record Payment' to update their balance."
+        }
       }
     }
   },
   "auth": {
     "signIn": "Sign In",
     "signUp": "Sign Up",
+    "businessManager": "Business Manager",
+    "personalLedger": "Personal Ledger",
     "email": "Email Address",
     "password": "Password",
     "forgotPassword": "Forgot Password?",
@@ -329,7 +378,6 @@
     "haveAccount": "Already have an account?",
     "guestExplorer": "Guest Explorer",
     "continueWithGoogle": "Continue with Google",
-    "orContinueWith": "OR CONTINUE AS",
     "resetLink": "Send Reset Link",
     "enterEmailReset": "Enter your email to receive a reset link",
     "fullName": "Full Name",
@@ -347,7 +395,6 @@
     "profile": "Profile",
     "editProfile": "Edit Profile",
     "cloudSync": "Cloud Sync",
-    "syncDataNow": "Sync Data Now",
     "syncDesc": "Secure cloud backup",
     "syncing": "Syncing...",
     "accountManagement": "Account Management",
@@ -359,14 +406,66 @@
     "logoutMsg": "Are you sure you want to logout?",
     "deleteAccount": "Delete Account",
     "deleteAccountMsg": "This will permanently delete everything. Continue?",
-    "loginRequired": "Login Required",
-    "loginRequiredMsg": "Please login to sync data.",
+    "loginRequiredSync": "Login Required",
+    "loginRequiredSyncMsg": "Please login to sync data.",
     "syncSuccess": "Data synced successfully",
     "syncError": "Sync failed",
-    "verifyEmailSent": "Verification email sent to new address",
     "failedUpdateProfile": "Failed to update profile",
     "emailLockedDesc": "Email cannot be changed",
+    "switchProfile": "Switch Profile",
+    "switchToPersonalDesc": "Switch to Personal Ledger profile",
+    "switchToBusinessDesc": "Switch to Business Manager profile",
     "accountRequiredTitle": "Account Required",
-    "accountRequiredDesc": "Please create an account or sign in to edit your profile."
+    "accountRequiredDesc": "Please create an account or sign in to edit your profile.",
+    "chooseProfile": "Choose Profile",
+    "profileSelectionDesc": "Select which account you want to access today",
+    "businessProfileDesc": "Manage shop, customers and inventory",
+    "personalProfileDesc": "Track your own expenses and dues",
+    "guestDataSync": "Sync Offline Data?",
+    "guestDataSyncMsg": "You have offline guest data. Do you want to merge it with your account?",
+    "deleteThisProfile": "Delete This Profile",
+    "deleteShopProfileDesc": "Remove business profile, keep personal",
+    "deletePersonalProfileDesc": "Remove personal profile, keep business",
+    "deleteShopProfileMsg": "This will permanently delete your Business profile and all its data (shops, customers, transactions). Your Personal profile will remain.",
+    "deletePersonalProfileMsg": "This will permanently delete your Personal profile and all its data. Your Business profile will remain.",
+    "profileDeleted": "Profile deleted successfully",
+    "guestProfileLocked": "Profile Selection Locked",
+    "guestProfileLockedMsg": "Guest users are limited to one profile choice. Sign up to access both profiles!",
+    "loginRequired": "Login Required",
+    "loginRequiredMsg": "This feature is only available for registered users. Would you like to login now?",
+    "customerLimitReached": "Customer Limit Reached",
+    "customerLimitMsg": "Guest users can add up to 5 customers. Login to add unlimited customers!",
+    "productLimitReached": "Product Limit Reached",
+    "productLimitMsg": "Guest users can add up to 10 products. Login to add unlimited products!",
+    "shopLimitReached": "Shop Limit Reached",
+    "shopLimitMsg": "Guest users can manage only 1 shop. Login to add unlimited shops!"
+  },
+  "shopkeeper": {
+    "activeCustomers": "Active Customers",
+    "addCustomer": "Add Customer",
+    "business": "Business",
+    "customers": "Customers",
+    "dashboard": "Hello",
+    "hasDue": "Has Due",
+    "bakiHistory": "Baki History",
+    "newBaki": "New Baki",
+    "noStarred": "No starred customers yet. Add them from the customers list.",
+    "payment": "Payment",
+    "paymentHistory": "Payment History",
+    "products": "Products",
+    "starredCustomers": "Starred Customers",
+    "todayCollection": "Today's Collection",
+    "todayDue": "Today's Due",
+    "totalMarketDue": "Total Market Due"
+  },
+  "sort": {
+    "title": "Sort Customers",
+    "nameAZ": "Name (A-Z)",
+    "nameZA": "Name (Z-A)",
+    "highestBalance": "Highest Balance",
+    "lowestBalance": "Lowest Balance",
+    "newest": "Newest",
+    "oldest": "Oldest",
+    "resetFilter": "Reset Filter"
   }
 }

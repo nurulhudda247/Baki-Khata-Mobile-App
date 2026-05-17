@@ -38,7 +38,7 @@ const getStyles = (theme: any, sfs: any) => StyleSheet.create({
     padding: 20,
     borderRadius: 24,
     marginBottom: 16,
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   iconContainer: {
     width: 56,
@@ -69,7 +69,9 @@ export default function UpcomingFeatures() {
   const { t } = useTranslation();
   
   const UPCOMING_FEATURES = [
-    { id: 1, title: t('upcoming.features.dashboard.title'), description: t('upcoming.features.dashboard.desc'), icon: 'grid-outline' },
+    { id: 1, title: t('upcoming.features.unifiedSync.title'), description: t('upcoming.features.unifiedSync.desc'), icon: 'sync-circle' },
+    { id: 2, title: t('upcoming.features.reminders.title'), description: t('upcoming.features.reminders.desc'), icon: 'notifications-circle' },
+    { id: 3, title: t('upcoming.features.multiShop.title'), description: t('upcoming.features.multiShop.desc'), icon: 'business-outline' },
   ];
 
   const handleRequestFeature = () => {

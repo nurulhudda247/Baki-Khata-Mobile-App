@@ -1,14 +1,16 @@
 import i18n from 'i18next';
+// Triggering i18n reload
 import { initReactI18next } from 'react-i18next';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Localization from 'expo-localization';
-
 import en from './locales/en.json';
 import bn from './locales/bn.json';
 
 const resources = {
-  en: { translation: en },
-  bn: { translation: bn },
+  en: {
+    translation: en
+  },
+  bn: {
+    translation: bn
+  }
 };
 
 i18n
@@ -17,6 +19,7 @@ i18n
     resources,
     lng: 'en',
     fallbackLng: 'en',
+    compatibilityJSON: 'v3',
     interpolation: {
       escapeValue: false,
     },

@@ -20,7 +20,6 @@ export const generateUUID = () => {
 };
 
 export const getDb = async () => {
-  if (Platform.OS === 'web') return null;
   if (db) return db;
   
   try {
@@ -36,10 +35,6 @@ export const getDb = async () => {
 };
 
 export const initDb = async () => {
-  if (Platform.OS === 'web') {
-    console.log('Running on Web: Skipping SQLite initialization');
-    return;
-  }
   const database = await getDb();
   if (database) {
     await database.execAsync(SCHEMA);
@@ -53,58 +48,58 @@ export const initDb = async () => {
     for (const table of tablesToMigrate) {
       try {
         await database.execAsync(`ALTER TABLE ${table} ADD COLUMN is_deleted INTEGER DEFAULT 0;`);
-      } catch (e) {
-        // Column already exists — safe to ignore
-      }
+      } catch (e) {}
+    }
+
+    try {
+      await database.execAsync(`ALTER TABLE shops ADD COLUMN type TEXT DEFAULT 'personal';`);
+    } catch (e) {}
+
+    try {
+      await database.execAsync(`ALTER TABLE shops ADD COLUMN phone TEXT;`);
+    } catch (e) {}
+
+    try {
+      await database.execAsync(`ALTER TABLE shops ADD COLUMN address TEXT;`);
+    } catch (e) {}
+
+    try { await database.execAsync(`ALTER TABLE user_profile ADD COLUMN role TEXT DEFAULT 'personal';`); } catch (e) {}
+    
+    // Data Cleanup: Ensure we don't have multiple rows for the same user/role due to previous bugs
+    try {
+      await database.execAsync(`
+        DELETE FROM user_profile 
+        WHERE id NOT IN (
+          SELECT MIN(id) 
+          FROM user_profile 
+          GROUP BY user_id, IFNULL(role, 'personal')
+        );
+      `);
+      // Update any remaining NULL roles to 'personal'
+      await database.execAsync(`UPDATE user_profile SET role = 'personal' WHERE role IS NULL;`);
+    } catch (e) {
+      console.error('Data cleanup failed', e);
     }
 
     try { await database.execAsync(`ALTER TABLE transactions ADD COLUMN edit_history TEXT;`); } catch (e) {}
     try { await database.execAsync(`ALTER TABLE payments ADD COLUMN edit_history TEXT;`); } catch (e) {}
 
+    try { await database.execAsync(`ALTER TABLE user_profile ADD COLUMN is_deleted INTEGER DEFAULT 0;`); } catch (e) {}
+    try { await database.execAsync(`ALTER TABLE user_profile ADD COLUMN is_dirty INTEGER DEFAULT 0;`); } catch (e) {}
+    try { await database.execAsync(`ALTER TABLE user_profile ADD COLUMN language TEXT DEFAULT 'en';`); } catch (e) {}
+    try { await database.execAsync(`ALTER TABLE user_profile ADD COLUMN theme TEXT DEFAULT 'dark';`); } catch (e) {}
+
+    try {
+      await database.execAsync(`ALTER TABLE customers ADD COLUMN is_starred INTEGER DEFAULT 0;`);
+    } catch (e) {}
+
     console.log('Database initialized successfully');
   }
 };
 
-// --- WEB MOCK LOGIC ---
-const WEB_STORAGE_KEY = 'bakikhata_web_db_v3';
-const getWebData = async () => {
-  const data = await AsyncStorage.getItem(WEB_STORAGE_KEY);
-  return data ? JSON.parse(data) : {
-    user_profile: [],
-    shops: [],
-    customers: [],
-    products: [],
-    transactions: [],
-    payments: []
-  };
-};
-
-const saveWebData = async (data: any) => {
-  await AsyncStorage.setItem(WEB_STORAGE_KEY, JSON.stringify(data));
-};
+// --- DATABASE HELPERS ---
 
 export const queryAll = async <T>(sql: string, params: any[] = []): Promise<T[]> => {
-  if (Platform.OS === 'web') {
-    const data = await getWebData();
-    const s = sql.toLowerCase();
-
-    if (s.includes('from shops')) {
-      const shops = data.shops.map((shop: any) => {
-        const shopCustomers = data.customers.filter((c: any) => String(c.shop_id) === String(shop.id));
-        let total_baki = 0;
-        shopCustomers.forEach((customer: any) => {
-          const trans = data.transactions.filter((t: any) => String(t.customer_id) === String(customer.id));
-          const pay = data.payments.filter((p: any) => String(p.customer_id) === String(customer.id));
-          total_baki += trans.reduce((sum: number, t: any) => sum + t.total_amount, 0);
-          total_baki -= pay.reduce((sum: number, p: any) => sum + p.amount, 0);
-        });
-        return { ...shop, total_baki };
-      });
-      return shops.sort((a: any, b: any) => a.name.localeCompare(b.name)) as T[];
-    }
-    // ... other web mocks would need updating too, but focusing on Native for now
-    return [] as T[];
-  }
   const database = await getDb();
   if (!database) return [];
   return await database.getAllAsync(sql, params);
@@ -168,4 +163,27 @@ export const migrateGuestData = async (newUserId: string) => {
   // Also update AsyncStorage guest status
   await AsyncStorage.removeItem('isGuest');
   console.log('Guest data migrated to user:', newUserId);
+};
+
+export const getPendingSyncCount = async (): Promise<number> => {
+  const userId = getCurrentUserId();
+  if (!userId || userId === 'guest') return 0;
+  
+  try {
+    const result = await queryFirst<{ total: number }>(`
+      SELECT (
+        (SELECT COUNT(*) FROM shops WHERE is_dirty = 1 AND user_id = ?) +
+        (SELECT COUNT(*) FROM customers WHERE is_dirty = 1 AND user_id = ?) +
+        (SELECT COUNT(*) FROM products WHERE is_dirty = 1 AND user_id = ?) +
+        (SELECT COUNT(*) FROM transactions WHERE is_dirty = 1 AND user_id = ?) +
+        (SELECT COUNT(*) FROM payments WHERE is_dirty = 1 AND user_id = ?) +
+        (SELECT COUNT(*) FROM user_profile WHERE is_dirty = 1 AND user_id = ?)
+      ) as total
+    `, [userId, userId, userId, userId, userId, userId]);
+    
+    return result?.total || 0;
+  } catch (e) {
+    console.error('Failed to get sync count', e);
+    return 0;
+  }
 };

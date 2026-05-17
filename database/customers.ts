@@ -8,6 +8,7 @@ export interface Customer {
   phone?: string;
   image_uri?: string;
   total_baki?: number;
+  is_starred?: number;
   created_at: string;
 }
 
@@ -33,7 +34,7 @@ export const createCustomer = async (shopId: string, name: string, phone?: strin
   const id = generateUUID();
   return await execute(
     'INSERT INTO customers (id, shop_id, user_id, name, phone, image_uri, is_dirty) VALUES (?, ?, ?, ?, ?, ?, 1)',
-    [id, shopId, userId, name, phone, imageUri]
+    [id, shopId, userId, name, phone || null, imageUri || null]
   );
 };
 
@@ -43,7 +44,16 @@ export const updateCustomer = async (id: string, name: string, phone?: string, i
 
   return await execute(
     'UPDATE customers SET name = ?, phone = ?, image_uri = ?, updated_at = CURRENT_TIMESTAMP, is_dirty = 1 WHERE id = ? AND user_id = ?',
-    [name, phone, imageUri, id, userId]
+    [name, phone || null, imageUri || null, id, userId]
+  );
+};
+
+export const toggleCustomerStar = async (id: string, isStarred: boolean) => {
+  const userId = getCurrentUserId();
+  if (!userId) throw new Error('No user logged in');
+  return await execute(
+    'UPDATE customers SET is_starred = ?, updated_at = CURRENT_TIMESTAMP, is_dirty = 1 WHERE id = ? AND user_id = ?',
+    [isStarred ? 1 : 0, id, userId]
   );
 };
 
@@ -84,4 +94,40 @@ export const getSelfCustomerByShop = async (shopId: string): Promise<Customer | 
   }
   
   return customer;
+};
+
+export const getAllCustomersWithBalance = async (shopType: 'business' | 'personal' = 'business'): Promise<Customer[]> => {
+  const userId = getCurrentUserId();
+  if (!userId) return [];
+
+  const query = `
+    SELECT c.*, 
+    (
+      (SELECT IFNULL(SUM(t.total_amount), 0) FROM transactions t WHERE t.customer_id = c.id AND t.is_deleted = 0) -
+      (SELECT IFNULL(SUM(p.amount), 0) FROM payments p WHERE p.customer_id = c.id AND p.is_deleted = 0)
+    ) as total_baki
+    FROM customers c
+    JOIN shops s ON c.shop_id = s.id
+    WHERE c.user_id = ? AND c.is_deleted = 0 AND c.name != 'Self' AND s.type = ?
+    ORDER BY total_baki DESC, c.name ASC
+  `;
+  return await queryAll<Customer>(query, [userId, shopType]);
+};
+
+export const getStarredCustomers = async (shopType: 'business' | 'personal' = 'business'): Promise<Customer[]> => {
+  const userId = getCurrentUserId();
+  if (!userId) return [];
+
+  const query = `
+    SELECT c.*, 
+    (
+      (SELECT IFNULL(SUM(t.total_amount), 0) FROM transactions t WHERE t.customer_id = c.id AND t.is_deleted = 0) -
+      (SELECT IFNULL(SUM(p.amount), 0) FROM payments p WHERE p.customer_id = c.id AND p.is_deleted = 0)
+    ) as total_baki
+    FROM customers c
+    JOIN shops s ON c.shop_id = s.id
+    WHERE c.user_id = ? AND c.is_deleted = 0 AND c.is_starred = 1 AND c.name != 'Self' AND s.type = ?
+    ORDER BY total_baki DESC, c.name ASC
+  `;
+  return await queryAll<Customer>(query, [userId, shopType]);
 };

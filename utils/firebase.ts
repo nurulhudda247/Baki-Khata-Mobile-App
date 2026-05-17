@@ -2,7 +2,6 @@ import { initializeApp } from 'firebase/app';
 // @ts-ignore
 import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getAnalytics, isSupported } from 'firebase/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Replace these with your actual Firebase config from the Firebase Console
@@ -29,11 +28,5 @@ export const auth = isFirebaseConfigured ? initializeAuth(app!, {
 
 // Initialize Firestore
 export const db = isFirebaseConfigured ? getFirestore(app!) : null as any;
-
-// Initialize Analytics
-export const analytics = isFirebaseConfigured ? (async () => {
-  const supported = await isSupported();
-  return supported ? getAnalytics(app!) : null;
-})() : null;
 
 export default app;
